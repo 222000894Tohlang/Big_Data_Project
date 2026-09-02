@@ -1,0 +1,29 @@
+# Dataset
+data/raw/
+data/processed/
+data/WildlifeReID-10K/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Environment variables
+.env
+
+# Model files
+*.pt
+*.pth
+*.h5
+*.keras
+
+# Generated results
+results/generated/
+
+# IDE
+.vscode/

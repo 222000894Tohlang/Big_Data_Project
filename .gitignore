@@ -1,7 +1,8 @@
 # Dataset
 data/raw/
 data/processed/
-data/WildlifeReID-10K/
+data/Dataset/
+
 
 # Python
 __pycache__/

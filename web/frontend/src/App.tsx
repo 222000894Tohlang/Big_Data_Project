@@ -462,7 +462,7 @@ function App() {
             color="text.secondary"
             sx={{ pt: 3 }}
           >
-            Honours research project · Wildlife species classification
+            Big data research project · Wildlife species classification
           </Typography>
         </Stack>
       </Container>

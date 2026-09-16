@@ -77,13 +77,14 @@ function App() {
     <Box
       sx={{
         minHeight: "100vh",
-        // minWidth: "90%",
+        minWidth: {xs:"100%", lg:'120%'},
         backgroundColor: "#f7f5f0",
         color: "#222",
         py: { xs: 4, md: 7 },
+        alignSelf:'center'
       }}
     >
-      <Container  maxWidth='xl'>
+      <Container sx={{minWidth:'90%'}}>
         <Stack spacing={5}>
           <Box
             component="header"
@@ -119,7 +120,7 @@ function App() {
                 letterSpacing: "-0.04em",
               }}
             >
-              Identify an animal
+              Identifyins an animal species
             </Typography>
 
             <Typography

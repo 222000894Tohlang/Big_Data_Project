@@ -1,0 +1,12 @@
+#cnn
+│
+├── models\
+│   └── wildlife_cnn.pth
+│
+├── results\
+│   └── species_labels.json
+│
+├── splits\
+│   ├── final_original_split.csv
+│   ├── final_original_species_summary.csv
+│   └── final_original_identity_summary.csv

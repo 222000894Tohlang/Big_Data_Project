@@ -1,0 +1,9 @@
+variation,species,confidence,response_time_ms,inference_ms
+original,sea turtle,0.4849,18.69,4.09
+low_quality_jpeg,sea turtle,0.4692,9.77,4.49
+medium_quality_jpeg,sea turtle,0.4829,9.62,3.89
+blurred,sea turtle,0.864,9.45,3.61
+darkened,sea turtle,0.7259,11.26,3.7
+brightened,leopard,0.5212,11.46,4.59
+grayscale,leopard,0.8397,9.53,4.01
+noisy,sea turtle,0.5208,12.59,4.03

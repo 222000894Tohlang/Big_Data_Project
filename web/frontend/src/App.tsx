@@ -11,9 +11,15 @@ import {
   Alert,
 } from "@mui/material";
 
+type SpeciesPrediction = {
+  species: string;
+  confidence: number;
+};
+
 type Prediction = {
   species: string;
   confidence: number;
+  top_predictions: SpeciesPrediction[];
 };
 
 function App() {
@@ -24,9 +30,7 @@ function App() {
   const [error, setError] = useState("");
   const [showDetails, setShowDetails] = useState(false);
 
-  const handleFileChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
 
     if (!selectedFile) return;
@@ -52,22 +56,31 @@ function App() {
     formData.append("file", file);
 
     try {
-      const response = await fetch(
-        "http://127.0.0.1:8000/predict",
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
+      const response = await fetch("http://127.0.0.1:8000/predict", {
+        method: "POST",
+        body: formData,
+      });
+
+      /* if (!response.ok) {
+        throw new Error("Prediction failed");
+      } */
 
       if (!response.ok) {
-        throw new Error("Prediction failed");
+        const errorData = await response.json().catch(() => null);
+
+        throw new Error(errorData?.detail || "Unable to classify this image.");
       }
+
+      const result: Prediction = await response.json();
+
+      setPrediction(result);
 
       const data: Prediction = await response.json();
       setPrediction(data);
-    } catch {
-      setError("We could not identify the image. Please try again.");
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "Something went wrong.",
+      );
     } finally {
       setLoading(false);
     }
@@ -77,14 +90,14 @@ function App() {
     <Box
       sx={{
         minHeight: "100vh",
-        minWidth: {xs:"100%", lg:'120%'},
+        minWidth: { xs: "100%", lg: "120%" },
         backgroundColor: "#f7f5f0",
         color: "#222",
         py: { xs: 4, md: 7 },
-        alignSelf:'center'
+        alignSelf: "center",
       }}
     >
-      <Container sx={{minWidth:'90%'}}>
+      <Container sx={{ minWidth: "90%" }}>
         <Stack spacing={5}>
           <Box
             component="header"
@@ -96,21 +109,17 @@ function App() {
           >
             <Typography
               variant="body1"
-              
-              sx={{ letterSpacing: "-0.02em" , fontWeight:700}}
+              sx={{ letterSpacing: "-0.02em", fontWeight: 700 }}
             >
               Wildlife Classifier
             </Typography>
 
-            <Typography
-              variant="body2"
-              color="text.secondary"
-            >
+            <Typography variant="body2" color="text.secondary">
               WildlifeReID-10K
             </Typography>
           </Box>
 
-          <Box sx={{ maxWidth: '100%' }}>
+          <Box sx={{ maxWidth: "100%" }}>
             <Typography
               variant="h3"
               sx={{
@@ -120,7 +129,7 @@ function App() {
                 letterSpacing: "-0.04em",
               }}
             >
-              Identifyins an animal species
+              Identifying an animal species
             </Typography>
 
             <Typography
@@ -130,11 +139,11 @@ function App() {
                 mt: 2,
                 fontSize: "1.05rem",
                 lineHeight: 1.7,
-                maxWidth: '100%',
+                maxWidth: "100%",
               }}
             >
-              Upload a wildlife photo and we’ll identify which of
-              the 22 species it most closely matches.
+              Upload a wildlife photo and we’ll identify which of the 22 species
+              it most closely matches.
             </Typography>
           </Box>
 
@@ -166,14 +175,11 @@ function App() {
                   },
                 }}
               >
-                <Typography sx={{fontWeight:600}}>
+                <Typography sx={{ fontWeight: 600 }}>
                   Drop a wildlife photo here
                 </Typography>
 
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                >
+                <Typography variant="body2" color="text.secondary">
                   or choose one from your computer
                 </Typography>
 
@@ -240,11 +246,7 @@ function App() {
                 {loading ? "Identifying species..." : "Identify species"}
               </Button>
 
-              {error && (
-                <Alert severity="error">
-                  {error}
-                </Alert>
-              )}
+              {error && <Alert severity="error">{error}</Alert>}
             </Stack>
           </Paper>
 
@@ -264,10 +266,7 @@ function App() {
                 }}
               >
                 <Box>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                  >
+                  <Typography variant="caption" color="text.secondary">
                     YOUR IMAGE
                   </Typography>
 
@@ -286,10 +285,7 @@ function App() {
                 </Box>
 
                 <Box>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                  >
+                  <Typography variant="caption" color="text.secondary">
                     RESULT
                   </Typography>
 
@@ -312,48 +308,52 @@ function App() {
                     {(prediction.confidence * 100).toFixed(1)}% confidence
                   </Typography>
 
-                  <Box sx={{ mt: 4 }}>
+                  <Box sx={{ mt: 3 }}>
                     <Typography
-                      variant="body2"
-                      sx={{fontWeight:600}}
+                      variant="subtitle2"
+                      sx={{
+                        fontWeight: 600,
+                        mb: 2,
+                      }}
                     >
-                      Other possibilities
+                      Top 3 predictions
                     </Typography>
 
-                    <Stack spacing={1} sx={{ mt: 1.5 }}>
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                        }}
-                      >
-                        <Typography variant="body2">
-                          Giraffe
-                        </Typography>
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                        >
-                          3.4%
-                        </Typography>
-                      </Box>
+                    <Stack spacing={2}>
+                      {prediction.top_predictions.map((item, index) => (
+                        <Box key={`${item.species}-${index}`}>
+                          <Stack
+                            direction="row"
+                            sx={{ mb: 0.5, justifyContent: "space-between" }}
+                          >
+                            <Typography variant="body2">
+                              {item.species}
+                            </Typography>
 
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                        }}
-                      >
-                        <Typography variant="body2">
-                          Okapi
-                        </Typography>
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                        >
-                          1.2%
-                        </Typography>
-                      </Box>
+                            <Typography variant="body2">
+                              {(item.confidence * 100).toFixed(1)}%
+                            </Typography>
+                          </Stack>
+
+                          <Box
+                            sx={{
+                              height: 6,
+                              bgcolor: "#e7e5df",
+                              borderRadius: 1,
+                              overflow: "hidden",
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                width: `${item.confidence * 100}%`,
+                                height: "100%",
+                                bgcolor: index === 0 ? "#454b40" : "#aaa99f",
+                                borderRadius: 1,
+                              }}
+                            />
+                          </Box>
+                        </Box>
+                      ))}
                     </Stack>
                   </Box>
                 </Box>
@@ -390,13 +390,8 @@ function App() {
                           justifyContent: "space-between",
                         }}
                       >
-                        <Typography variant="body2">
-                          Model
-                        </Typography>
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                        >
+                        <Typography variant="body2">Model</Typography>
+                        <Typography variant="body2" color="text.secondary">
                           CNN
                         </Typography>
                       </Box>
@@ -407,13 +402,8 @@ function App() {
                           justifyContent: "space-between",
                         }}
                       >
-                        <Typography variant="body2">
-                          Dataset
-                        </Typography>
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                        >
+                        <Typography variant="body2">Dataset</Typography>
+                        <Typography variant="body2" color="text.secondary">
                           WildlifeReID-10K
                         </Typography>
                       </Box>
@@ -424,13 +414,8 @@ function App() {
                           justifyContent: "space-between",
                         }}
                       >
-                        <Typography variant="body2">
-                          Species classes
-                        </Typography>
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                        >
+                        <Typography variant="body2">Species classes</Typography>
+                        <Typography variant="body2" color="text.secondary">
                           22
                         </Typography>
                       </Box>
@@ -441,13 +426,8 @@ function App() {
                           justifyContent: "space-between",
                         }}
                       >
-                        <Typography variant="body2">
-                          API
-                        </Typography>
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                        >
+                        <Typography variant="body2">API</Typography>
+                        <Typography variant="body2" color="text.secondary">
                           REST
                         </Typography>
                       </Box>
@@ -458,11 +438,7 @@ function App() {
             </Box>
           )}
 
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            sx={{ pt: 3 }}
-          >
+          <Typography variant="caption" color="text.secondary" sx={{ pt: 3 }}>
             Big data research project · Wildlife species classification
           </Typography>
         </Stack>

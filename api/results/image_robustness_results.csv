@@ -1,0 +1,13 @@
+filename,file_size_kb,status_code,response_time_ms,species,confidence,preprocessing_ms,inference_ms,processing_ms,width,height,format
+tiger_64x64.jpg,2.07,200,12.8,sea turtle,0.9519,0.5,3.52,4.07,64,64,JPEG
+tiger_64x64.png,10.0,200,7.9,sea turtle,0.9494,0.71,3.46,4.22,64,64,PNG
+tiger_128x128.jpg,6.19,200,8.26,leopard,0.5448,0.54,4.92,5.52,128,128,JPEG
+tiger_128x128.png,38.92,200,8.79,leopard,0.4544,0.87,3.99,4.91,128,128,PNG
+tiger_256x256.jpg,21.08,200,8.37,sea turtle,0.5425,1.04,3.85,4.95,256,256,JPEG
+tiger_256x256.png,149.74,200,10.16,sea turtle,0.5636,2.39,3.86,6.32,256,256,PNG
+tiger_512x512.jpg,70.55,200,10.32,sea turtle,0.5011,2.35,3.87,6.27,512,512,JPEG
+tiger_512x512.png,550.54,200,14.29,sea turtle,0.5016,6.93,3.9,10.88,512,512,PNG
+tiger_1024x1024.jpg,199.58,200,13.36,sea turtle,0.4889,5.71,3.55,9.3,1024,1024,JPEG
+tiger_1024x1024.png,1757.66,200,44.09,sea turtle,0.4878,23.08,3.63,26.75,1024,1024,PNG
+tiger_2048x2048.jpg,507.52,200,25.12,sea turtle,0.486,17.41,3.88,21.34,2048,2048,JPEG
+tiger_2048x2048.png,4982.5,200,97.65,sea turtle,0.4847,77.53,3.74,81.32,2048,2048,PNG

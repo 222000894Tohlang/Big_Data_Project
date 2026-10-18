@@ -8,6 +8,7 @@ numpy
 pandas
 scipy
 matplotlib
+tqdm
 scikit-learn==1.6.1
 scikit-image
 joblib

@@ -1,0 +1,2 @@
+best_epoch,best_validation_loss,test_loss,test_accuracy,test_accuracy_percent,test_images,test_identities,model_path,split_csv
+1,0.19213093998338968,0.21326495228354536,0.9350956372232968,93.50956372232969,23265,1627,D:\Studies\Dataset\archive (1)\models\wildlife_cnn_leakage_aware.pth,D:\Studies\Dataset\archive (1)\splits\leakage_aware_split.csv

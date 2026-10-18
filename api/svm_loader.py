@@ -25,9 +25,6 @@ def load_svm_model():
     """
     Load a trusted, CPU-compatible SVM artifact.
 
-    Only call this after confirming the model was
-    supplied by Person 3 and is compatible with
-    the current environment.
     """
     if not svm_model_exists():
         raise SVMUnavailableError(

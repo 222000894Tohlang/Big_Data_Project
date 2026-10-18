@@ -17,7 +17,7 @@ type Metric = {
 };
 
 const metrics: Metric[] = [
-  { label: "Accuracy", cnn: 84.0, svm: 80.87 },
+  { label: "Accuracy", cnn: 84.0, svm: 80.87 }, //  { label: "Accuracy", cnn: null, svm: 83.34 },
   { label: "Macro F1-score", cnn: null, svm: 79.98 },
   { label: "Macro precision", cnn: null, svm: 78.23 },
   { label: "Macro recall", cnn: null, svm: 82.65 },
@@ -146,7 +146,7 @@ export default function ModelComparison() {
 
               <Chip
                 size="small"
-                label="Held-out evaluation"
+label="Original split · 30,561 images"
                 sx={{ mt: 1 }}
               />
             </Box>
@@ -198,18 +198,18 @@ export default function ModelComparison() {
 
           <Divider />
 
-          <Typography
-            variant="body2"
-            color="text.secondary"
-          >
-            CNN accuracy (84.0%) is an approximate
-            previously reported result and requires
-            verification. SVM metrics come from
-            Person 3's evaluation of 23,178 test images.
-            A direct comparison requires confirmation
-            that both models were evaluated on the
-            same held-out test split.
-          </Typography>
+          <Typography variant="body2" color="text.secondary">
+  SVM results were reported using the
+  original/experiment split containing 30,561 test images.
+  This split was not identity-disjoint.
+
+  CNN evaluation metrics are awaiting verification.
+  Direct model comparisons require evaluation on the
+  same test partition.
+
+  Live predictions are available for both CNN models.
+  SVM inference is currently unavailable in this environment.
+</Typography>
         </Stack>
       </CardContent>
     </Card>

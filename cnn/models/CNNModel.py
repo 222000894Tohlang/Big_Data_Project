@@ -1,17 +1,13 @@
 import os
-
 import torch
 import torch.nn as nn
-
 import pandas as pd
-
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from PIL import Image
 
-
+# A simple convolutional neural network (CNN) for image classification. 
 class SimpleCNN(nn.Module):
-
     def __init__(
         self,
         num_classes
@@ -19,9 +15,7 @@ class SimpleCNN(nn.Module):
 
         super().__init__()
 
-
         self.features = nn.Sequential(
-
             # 128 -> 64
             nn.Conv2d(
                 3,
@@ -31,9 +25,7 @@ class SimpleCNN(nn.Module):
             ),
 
             nn.ReLU(),
-
             nn.MaxPool2d(2),
-
 
             # 64 -> 32
             nn.Conv2d(
@@ -44,9 +36,7 @@ class SimpleCNN(nn.Module):
             ),
 
             nn.ReLU(),
-
             nn.MaxPool2d(2),
-
 
             # 32 -> 16
             nn.Conv2d(
@@ -57,22 +47,17 @@ class SimpleCNN(nn.Module):
             ),
 
             nn.ReLU(),
-
             nn.MaxPool2d(2)
         )
 
-
         self.classifier = nn.Sequential(
-
             nn.Flatten(),
-
             nn.Linear(
                 128 * 16 * 16,
                 256
             ),
 
             nn.ReLU(),
-
             nn.Dropout(0.5),
 
             nn.Linear(
@@ -81,16 +66,14 @@ class SimpleCNN(nn.Module):
             )
         )
 
-
+    # Forward pass through the network
     def forward(self, x):
-
         x = self.features(x)
-
         x = self.classifier(x)
 
         return x
 
-
+# A trainer class for the SimpleCNN model.
 class CNNTrainer:
 
     def __init__(
@@ -101,49 +84,35 @@ class CNNTrainer:
     ):
 
         if device is None:
-
             self.device = torch.device(
                 "cuda"
                 if torch.cuda.is_available()
                 else "cpu"
             )
-
         else:
-
             self.device = device
-
 
         self.model = SimpleCNN(
             num_classes
         ).to(self.device)
 
-
         self.criterion = (
             nn.CrossEntropyLoss()
         )
 
-
         self.optimizer = torch.optim.Adam(
-
             self.model.parameters(),
-
             lr=learning_rate
         )
 
-
         self.history = []
-
 
         print(
             "\nUsing device:",
             self.device
         )
 
-
-    # --------------------------------------------------------
     # TRAIN ONE EPOCH
-    # --------------------------------------------------------
-
     def train_epoch(
             self,
             loader,
@@ -172,37 +141,25 @@ class CNNTrainer:
                 self.device
             )
 
-            # ----------------------------------------
             # Forward
-            # ----------------------------------------
-
             self.optimizer.zero_grad()
 
             outputs = self.model(
                 images
             )
 
-            # ----------------------------------------
             # Loss
-            # ----------------------------------------
-
             loss = self.criterion(
                 outputs,
                 labels
             )
 
-            # ----------------------------------------
             # Backpropagation
-            # ----------------------------------------
-
             loss.backward()
 
             self.optimizer.step()
 
-            # ----------------------------------------
             # Statistics
-            # ----------------------------------------
-
             batch_size = images.size(0)
 
             total_loss += (
@@ -220,10 +177,7 @@ class CNNTrainer:
 
             total += batch_size
 
-            # ----------------------------------------
             # Current statistics
-            # ----------------------------------------
-
             current_loss = (
                     total_loss / total
             )
@@ -250,11 +204,7 @@ class CNNTrainer:
             epoch_accuracy
         )
 
-
-    # --------------------------------------------------------
     # VALIDATION
-    # --------------------------------------------------------
-
     def validate(
             self,
             loader,
@@ -269,14 +219,11 @@ class CNNTrainer:
         total = 0
 
         if epoch is not None:
-
             description = (
                 f"Epoch {epoch}/{total_epochs} "
                 f"[Validation]"
             )
-
         else:
-
             description = "Validation"
 
         progress = tqdm(
@@ -286,7 +233,6 @@ class CNNTrainer:
         )
 
         with torch.no_grad():
-
             for images, labels in progress:
                 images = images.to(
                     self.device
@@ -348,11 +294,7 @@ class CNNTrainer:
             epoch_accuracy
         )
 
-
-    # --------------------------------------------------------
     # TRAIN MODEL
-    # --------------------------------------------------------
-
     def train(
             self,
             train_loader,
@@ -363,10 +305,8 @@ class CNNTrainer:
         print("\nStarting training...\n")
 
         for epoch in range(1, epochs + 1):
-            # ----------------------------------------
-            # Training
-            # ----------------------------------------
 
+            # Training
             train_loss, train_accuracy = (
                 self.train_epoch(
                     train_loader,
@@ -375,10 +315,7 @@ class CNNTrainer:
                 )
             )
 
-            # ----------------------------------------
             # Validation
-            # ----------------------------------------
-
             validation_loss, validation_accuracy = (
                 self.validate(
                     validation_loader,
@@ -387,10 +324,7 @@ class CNNTrainer:
                 )
             )
 
-            # ----------------------------------------
             # Save history
-            # ----------------------------------------
-
             record = {
 
                 "epoch": epoch,
@@ -412,10 +346,7 @@ class CNNTrainer:
                 record
             )
 
-            # ----------------------------------------
             # Epoch summary
-            # ----------------------------------------
-
             print()
 
             print(
@@ -446,11 +377,7 @@ class CNNTrainer:
                 "-" * 60
             )
 
-
-    # --------------------------------------------------------
     # TEST
-    # --------------------------------------------------------
-
     def evaluate(
             self,
             test_loader
@@ -488,11 +415,7 @@ class CNNTrainer:
 
         return loss, accuracy
 
-
-    # --------------------------------------------------------
     # SAVE MODEL
-    # --------------------------------------------------------
-
     def save(
         self,
         path,
@@ -501,9 +424,7 @@ class CNNTrainer:
     ):
 
         torch.save(
-
             {
-
                 "model_state_dict":
                     self.model.state_dict(),
 
@@ -513,10 +434,8 @@ class CNNTrainer:
                 "image_size":
                     image_size
             },
-
             path
         )
-
 
         print(
             "\nModel saved:"
@@ -524,11 +443,7 @@ class CNNTrainer:
 
         print(path)
 
-
-    # --------------------------------------------------------
     # SAVE HISTORY
-    # --------------------------------------------------------
-
     def save_history(
         self,
         path
@@ -543,11 +458,7 @@ class CNNTrainer:
             index=False
         )
 
-
-    # --------------------------------------------------------
     # PLOT RESULTS
-    # --------------------------------------------------------
-
     def plot_results(
         self,
         output_directory
@@ -557,9 +468,7 @@ class CNNTrainer:
             self.history
         )
 
-
         # Loss
-
         plt.figure()
 
         plt.plot(
@@ -575,7 +484,6 @@ class CNNTrainer:
         )
 
         plt.xlabel("Epoch")
-
         plt.ylabel("Loss")
 
         plt.title(
@@ -593,9 +501,7 @@ class CNNTrainer:
 
         plt.close()
 
-
         # Accuracy
-
         plt.figure()
 
         plt.plot(
@@ -611,7 +517,6 @@ class CNNTrainer:
         )
 
         plt.xlabel("Epoch")
-
         plt.ylabel("Accuracy")
 
         plt.title(
@@ -629,11 +534,7 @@ class CNNTrainer:
 
         plt.close()
 
-
-    # --------------------------------------------------------
     # PREDICT IMAGE
-    # --------------------------------------------------------
-
     def predict(
         self,
         image_path,
@@ -642,7 +543,6 @@ class CNNTrainer:
     ):
 
         self.model.eval()
-
 
         image = Image.open(
             image_path
@@ -653,14 +553,11 @@ class CNNTrainer:
             image
         )
 
-
         image = image.unsqueeze(0)
-
 
         image = image.to(
             self.device
         )
-
 
         with torch.no_grad():
 
@@ -668,25 +565,21 @@ class CNNTrainer:
                 image
             )
 
-
             probabilities = torch.softmax(
                 output,
                 dim=1
             )
-
 
             confidence, prediction = torch.max(
                 probabilities,
                 dim=1
             )
 
-
         predicted_species = (
             id_to_species[
                 prediction.item()
             ]
         )
-
 
         return (
             predicted_species,

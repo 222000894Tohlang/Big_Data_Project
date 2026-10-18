@@ -8,6 +8,7 @@ _SPLIT_MAP = {
     "test": "test",
 }
 
+# Load the splits from the CSV file and return a dictionary of DataFrames for each split
 def load_splits(csv_path=CSV_PATH, split_col=SPLIT_COL,path_col=PATH_COL, label_col=LABEL_COL):
     df = pd.read_csv(csv_path, low_memory=False)
 
@@ -22,8 +23,8 @@ def load_splits(csv_path=CSV_PATH, split_col=SPLIT_COL,path_col=PATH_COL, label_
         out[name] = df[df["_split"] == name].reset_index(drop=True)
     return out
 
+# Return a sorted list of unique species
 def species_mapping(df):
-    """Return sorted list of species so the class-id order is deterministic."""
     return sorted(df["species"].unique())
 
 if __name__ == "__main__":

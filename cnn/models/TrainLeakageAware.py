@@ -3,23 +3,17 @@ import json
 import time
 import random
 from pathlib import Path
-
 import numpy as np
 import pandas as pd
 from PIL import Image
 from tqdm.auto import tqdm
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 
-
-# ============================================================
-# 1. CONFIGURATION
-# ============================================================
-
+# CONSTANT PATHS AND PARAMETERS
 DATASET_ROOT = Path(r"D:\Studies\Dataset\archive (1)")
 
 # Prefer final_clean_split.csv for the final experiment.
@@ -48,10 +42,7 @@ DEVICE = torch.device(
 )
 
 
-# ============================================================
-# 2. REPRODUCIBILITY
-# ============================================================
-
+# Random seed for reproducibility
 def set_seed(seed=42):
     random.seed(seed)
     np.random.seed(seed)
@@ -60,18 +51,8 @@ def set_seed(seed=42):
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
 
-
-# ============================================================
-# 3. CNN MODEL
-# ============================================================
-
+# CNN MODEL
 class SimpleCNN(nn.Module):
-    """
-    CNN for classifying wildlife images into species.
-
-    Input:  RGB image of size 128 x 128
-    Output: One score per species class
-    """
 
     def __init__(self, num_classes):
         super().__init__()
@@ -80,11 +61,9 @@ class SimpleCNN(nn.Module):
             nn.Conv2d(3, 32, kernel_size=3, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(2),
-
             nn.Conv2d(32, 64, kernel_size=3, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(2),
-
             nn.Conv2d(64, 128, kernel_size=3, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(2),
@@ -102,21 +81,11 @@ class SimpleCNN(nn.Module):
         x = self.features(x)
         return self.classifier(x)
 
-
-# ============================================================
-# 4. IMAGE PATH RESOLUTION
-# ============================================================
-
+# IMAGE PATH RESOLUTION
 def resolve_image_path(path_value):
-    """
-    Resolve an image path from the split CSV.
-
-    Supports absolute paths and paths relative to the dataset root.
-    """
 
     raw_path = str(path_value).strip()
     path = Path(raw_path)
-
     candidates = []
 
     if path.is_absolute():
@@ -139,20 +108,8 @@ def resolve_image_path(path_value):
         + "\n".join(str(p) for p in candidates)
     )
 
-
-# ============================================================
-# 5. LOAD SPECIES LABELS
-# ============================================================
-
+# LOAD SPECIES LABELS
 def load_species_mapping(json_path):
-    """
-    Accepts either:
-      {"0": "bird", "1": "cat", ...}
-    or:
-      {"bird": 0, "cat": 1, ...}
-
-    Returns a dictionary mapping species names to integer labels.
-    """
 
     with open(json_path, "r", encoding="utf-8") as file:
         mapping = json.load(file)
@@ -181,11 +138,7 @@ def load_species_mapping(json_path):
 
     return species_to_idx
 
-
-# ============================================================
-# 6. DATASET
-# ============================================================
-
+# DATASET
 class WildlifeDataset(Dataset):
     def __init__(self, dataframe, species_to_idx, transform=None):
         self.dataframe = dataframe.reset_index(drop=True)
@@ -217,16 +170,8 @@ class WildlifeDataset(Dataset):
 
         return image, label
 
-
-# ============================================================
-# 7. TRANSFORMS
-# ============================================================
-
+# Transforms
 def create_transforms():
-    """
-    Training includes horizontal flipping.
-    Validation and testing use deterministic preprocessing.
-    """
 
     train_transform = transforms.Compose([
         transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)),
@@ -249,11 +194,7 @@ def create_transforms():
 
     return train_transform, evaluation_transform
 
-
-# ============================================================
-# 8. PREPARE AND VALIDATE SPLITS
-# ============================================================
-
+# PREPARE AND VALIDATE SPLITS
 def normalize_split_name(value):
     value = str(value).strip().lower()
 
@@ -268,7 +209,6 @@ def normalize_split_name(value):
     }
 
     return aliases.get(value, value)
-
 
 def prepare_data():
     if not SPLIT_CSV.is_file():
@@ -414,11 +354,7 @@ def prepare_data():
 
     return train_df, val_df, test_df, species_to_idx
 
-
-# ============================================================
-# 9. CREATE DATA LOADERS
-# ============================================================
-
+# CREATE DATA LOADERS
 def create_data_loaders(
     train_df,
     val_df,
@@ -473,11 +409,7 @@ def create_data_loaders(
 
     return train_loader, val_loader, test_loader
 
-
-# ============================================================
-# 10. TRAINING / EVALUATION EPOCH WITH PROGRESS BAR
-# ============================================================
-
+# LOAD TRAINED MODEL
 def run_epoch(
     model,
     loader,
@@ -552,11 +484,7 @@ def run_epoch(
 
     return average_loss, accuracy
 
-
-# ============================================================
-# 11. MAIN TRAINING LOOP
-# ============================================================
-
+# MAIN TRAINING LOOP
 def train_model():
     set_seed(RANDOM_SEED)
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
@@ -712,10 +640,7 @@ def train_model():
     )
     print(f"Metrics CSV: {METRICS_PATH}")
 
-    # --------------------------------------------------------
-    # 12. LOAD BEST CHECKPOINT BEFORE FINAL TEST EVALUATION
-    # --------------------------------------------------------
-
+    # LOAD BEST CHECKPOINT BEFORE FINAL TEST EVALUATION
     print("\nLoading the best checkpoint for final test evaluation...")
 
     try:
@@ -769,10 +694,6 @@ def train_model():
 
     print(f"Test metrics saved: {test_metrics_path}")
 
-
-# ============================================================
-# 13. ENTRY POINT
-# ============================================================
-
+# ENTRY POINT
 if __name__ == "__main__":
     train_model()

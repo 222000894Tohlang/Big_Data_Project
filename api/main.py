@@ -1,6 +1,7 @@
 import logging
 import time
-
+from typing import Literal
+from model_registry import get_available_models
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -15,6 +16,8 @@ from config import (
 )
 
 from contextlib import asynccontextmanager
+from svm_inference import predict_svm
+from svm_loader import SVMUnavailableError
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
@@ -91,7 +94,11 @@ def model_health():
 
 
 @app.post("/predict", response_model=PredictionResponse)
-async def predict(file: UploadFile = File(...)):
+async def predict(file: UploadFile = File(...),
+    model_name: Literal[
+        "cnn",
+        "cnn_leakage_aware",
+    ] = "cnn",):
 
     start_time = time.perf_counter()
 
@@ -119,7 +126,8 @@ async def predict(file: UploadFile = File(...)):
             )
 
         # 3. Run CNN inference
-        prediction = predict_species(image_bytes)
+        prediction = predict_species(image_bytes,
+    model_name=model_name,)
 
         # 4. Record processing time
         processing_time_ms = (time.perf_counter() - start_time) * 1000
@@ -148,6 +156,60 @@ async def predict(file: UploadFile = File(...)):
             status_code=500,
             detail="Prediction failed. Please try again.",
         ) from None
+
+    finally:
+        await file.close()
+
+
+@app.get("/models")
+def list_models():
+    return {
+        "models": get_available_models()
+    }
+
+
+@app.post("/predict/svm")
+async def predict_with_svm(file: UploadFile = File(...)):
+    try:
+        if file.content_type not in ("image/jpeg", "image/png"):
+            raise HTTPException(
+                status_code=415,
+                detail="Only JPEG and PNG images are supported.",
+            )
+
+        # Check availability before reading the image.
+        from svm_loader import svm_model_exists
+
+        if not svm_model_exists():
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "SVM model is not available yet. "
+                    "A CPU-compatible artifact is required."
+                ),
+            )
+
+        image_bytes = await file.read()
+
+        if len(image_bytes) > 10 * 1024 * 1024:
+            raise HTTPException(
+                status_code=413,
+                detail="Image exceeds the 10 MB limit.",
+            )
+
+        if not image_bytes:
+            raise HTTPException(
+                status_code=400,
+                detail="Uploaded image is empty.",
+            )
+
+        return predict_svm(image_bytes)
+
+    except SVMUnavailableError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=str(exc),
+        ) from exc
 
     finally:
         await file.close()

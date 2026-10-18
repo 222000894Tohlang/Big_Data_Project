@@ -1,3 +1,4 @@
+
 from io import BytesIO
 
 import torch
@@ -34,7 +35,8 @@ def validate_image(image_bytes: bytes) -> Image.Image:
         ) from exc
 
 
-def preprocess_image(image_bytes: bytes) -> torch.Tensor:
+def preprocess_image( image_bytes: bytes,
+    model_name: str = "cnn",) -> torch.Tensor:
     """
     Convert uploaded image bytes into a CNN-ready tensor.
 
@@ -43,11 +45,15 @@ def preprocess_image(image_bytes: bytes) -> torch.Tensor:
 
     image = validate_image(image_bytes)
 
-    image_size = get_image_size()
-
+    image_size = get_image_size(model_name)
+    
     transform = transforms.Compose([
         transforms.Resize((image_size, image_size)),
         transforms.ToTensor(),
+        transforms.Normalize(
+            mean=[0.485, 0.456, 0.406],
+            std=[0.229, 0.224, 0.225],
+        ),
     ])
 
     image_tensor = transform(image)

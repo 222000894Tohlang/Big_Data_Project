@@ -1,28 +1,54 @@
-import { useState } from "react";
+/* eslint-disable react-hooks/set-state-in-effect */
+import { useEffect, useState } from "react";
+import type { ChangeEvent } from "react";
 import {
+  Alert,
   Box,
   Button,
+  Chip,
+  CircularProgress,
   Collapse,
   Container,
   Divider,
+  FormControl,
+  FormControlLabel,
   Paper,
+  Radio,
+  RadioGroup,
   Stack,
   Typography,
-  Alert,
 } from "@mui/material";
+import ModelComparison from "./components/ModelComparison";
 
-type SpeciesPrediction = {
-  species: string;
-  confidence: number;
+const API_URL = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
+type ModelId = "cnn" | "cnn_leakage_aware" | "svm";
+type ModelInfo = {
+  name: string;
+  available: boolean;
+  status: string;
+  classes: number;
+  image_size: number;
 };
-
-type Prediction = {
+type ModelRegistry = { models: Record<ModelId, ModelInfo> };
+type SpeciesPrediction = { species: string; confidence: number };
+type CNNPrediction = {
+  model_name?: "cnn" | "cnn_leakage_aware";
   species: string;
   confidence: number;
   top_predictions: SpeciesPrediction[];
+  timing?: Record<string, number>;
 };
+type SVMPrediction = { model: "svm"; species: string; decision_score?: number };
+type Prediction = CNNPrediction | SVMPrediction;
+
+const isCNNPrediction = (prediction: Prediction): prediction is CNNPrediction =>
+  "confidence" in prediction;
 
 function App() {
+  const [models, setModels] = useState<ModelRegistry["models"] | null>(null);
+  const [modelsError, setModelsError] = useState("");
+  const [model, setModel] = useState<ModelId>("cnn");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [prediction, setPrediction] = useState<Prediction | null>(null);
@@ -30,16 +56,57 @@ function App() {
   const [error, setError] = useState("");
   const [showDetails, setShowDetails] = useState(false);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = event.target.files?.[0];
+  useEffect(() => {
+    const controller = new AbortController();
+    async function fetchModels() {
+      try {
+        const response = await fetch(`${API_URL}/models`, {
+          signal: controller.signal,
+        });
+        if (!response.ok)
+          throw new Error("Unable to retrieve model availability.");
+        const data: ModelRegistry = await response.json();
+        setModels(data.models);
+        setModelsError("");
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        setModelsError(
+          err instanceof Error ? err.message : "Cannot connect to the API.",
+        );
+      }
+    }
+    void fetchModels();
+    return () => controller.abort();
+  }, []);
 
-    if (!selectedFile) return;
+  useEffect(() => {
+    if (!file) {
+      setPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
 
-    setFile(selectedFile);
-    setPreview(URL.createObjectURL(selectedFile));
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const selected = event.target.files?.[0];
+    if (!selected) return;
+    event.target.value = "";
     setPrediction(null);
-    setError("");
     setShowDetails(false);
+    setError("");
+    if (!["image/jpeg", "image/png"].includes(selected.type)) {
+      setFile(null);
+      setError("Please select a JPEG or PNG image.");
+      return;
+    }
+    if (selected.size > MAX_FILE_BYTES) {
+      setFile(null);
+      setError("The image must be 10 MB or smaller.");
+      return;
+    }
+    setFile(selected);
   };
 
   const handleSubmit = async () => {
@@ -47,121 +114,161 @@ function App() {
       setError("Please choose an image first.");
       return;
     }
-
+    if (!models?.[model]?.available) {
+      setError("This model is not available for predictions yet.");
+      return;
+    }
     setLoading(true);
     setError("");
     setPrediction(null);
-
     const formData = new FormData();
     formData.append("file", file);
-
     try {
-      const response = await fetch("http://127.0.0.1:8000/predict", {
+      const endpoint =
+        model === "svm"
+          ? "/predict/svm"
+          : `/predict?model_name=${encodeURIComponent(model)}`;
+      const response = await fetch(`${API_URL}${endpoint}`, {
         method: "POST",
         body: formData,
       });
-
-      /* if (!response.ok) {
-        throw new Error("Prediction failed");
-      } */
-
+      const data: unknown = await response.json().catch(() => null);
       if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-
-        throw new Error(errorData?.detail || "Unable to classify this image.");
+        const detail =
+          data && typeof data === "object" && "detail" in data
+            ? String(data.detail)
+            : "Unable to classify this image.";
+        throw new Error(detail);
       }
-
-      const result: Prediction = await response.json();
-
-      setPrediction(result);
-
-      const data: Prediction = await response.json();
-      setPrediction(data);
-    } catch (error) {
-      setError(
-        error instanceof Error ? error.message : "Something went wrong.",
-      );
+      if (!data || typeof data !== "object" || !("species" in data)) {
+        throw new Error("The API returned an unexpected prediction response.");
+      }
+      setPrediction(data as Prediction);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
       setLoading(false);
     }
   };
 
+  const modelAvailable = models?.[model]?.available ?? false;
+
   return (
     <Box
       sx={{
         minHeight: "100vh",
-        minWidth: { xs: "100%", lg: "120%" },
-        backgroundColor: "#f7f5f0",
+        bgcolor: "#f7f5f0",
         color: "#222",
         py: { xs: 4, md: 7 },
-        alignSelf: "center",
       }}
     >
-      <Container sx={{ minWidth: "90%" }}>
-        <Stack spacing={5}>
-          <Box
-            component="header"
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
+      <Container maxWidth="lg">
+        <Stack spacing={4}>
+          <Stack
+            direction="row"
+            sx={{justifyContent:"space-between",
+            alignItems:"center"}}
           >
-            <Typography
-              variant="body1"
-              sx={{ letterSpacing: "-0.02em", fontWeight: 700 }}
-            >
-              Wildlife Classifier
-            </Typography>
-
+            <Typography sx={{fontWeight:700}}>Wildlife Classifier</Typography>
             <Typography variant="body2" color="text.secondary">
               WildlifeReID-10K
             </Typography>
-          </Box>
-
-          <Box sx={{ maxWidth: "100%" }}>
+          </Stack>
+          <Box>
             <Typography
               variant="h3"
               sx={{
                 fontWeight: 700,
-                fontSize: { xs: "2.2rem", md: "3.3rem" },
-                lineHeight: 1.05,
+                fontSize: { xs: "2.1rem", md: "3.1rem" },
                 letterSpacing: "-0.04em",
               }}
             >
               Identifying an animal species
             </Typography>
-
-            <Typography
-              variant="body1"
-              color="text.secondary"
-              sx={{
-                mt: 2,
-                fontSize: "1.05rem",
-                lineHeight: 1.7,
-                maxWidth: "100%",
-              }}
-            >
-              Upload a wildlife photo and we’ll identify which of the 22 species
-              it most closely matches.
+            <Typography color="text.secondary" sx={{ mt: 2, maxWidth: 650 }}>
+              Upload a wildlife photo and choose a classification model to
+              identify which of the 22 species it most closely matches.
             </Typography>
           </Box>
 
           <Paper
             variant="outlined"
-            sx={{
-              p: { xs: 2, md: 3 },
-              borderRadius: 2,
-              backgroundColor: "#fff",
-              boxShadow: "none",
-            }}
+            sx={{ p: { xs: 2, md: 3 }, borderRadius: 2, boxShadow: "none" }}
           >
             <Stack spacing={3}>
+              <Box>
+                <Typography  sx={{ mb: 1, fontWeight:600 }}>
+                  Classification model
+                </Typography>
+                {modelsError && (
+                  <Alert severity="warning" sx={{ mb: 2 }}>
+                    {modelsError}
+                  </Alert>
+                )}
+                <FormControl>
+                  <RadioGroup
+                    value={model}
+                    onChange={(event) => {
+                      setModel(event.target.value as ModelId);
+                      setPrediction(null);
+                      setError("");
+                      setShowDetails(false);
+                    }}
+                  >
+                    {(["cnn", "cnn_leakage_aware", "svm"] as const).map((id) => (
+                      <FormControlLabel
+                        key={id}
+                        value={id}
+                        disabled={!models?.[id]?.available}
+                        control={<Radio />}
+                        label={
+                          <Stack
+                            direction="row"
+                            sx={{alignItems:"center"}}
+                            spacing={1}
+                          >
+                            <Typography>
+                              {models?.[id]?.name ??
+                                (id === "cnn"
+                                  ? "Original CNN"
+                                  : id === "cnn_leakage_aware"
+                                    ? "Leakage-Aware CNN"
+                                    : "HOG + SVM (Traditional ML)")}
+                            </Typography>
+                            <Chip
+                              size="small"
+                              variant="outlined"
+                              label={
+                                models?.[id]?.available
+                                  ? "Available"
+                                  : "Pending"
+                              }
+                            />
+                          </Stack>
+                        }
+                      />
+                    ))}
+                  </RadioGroup>
+                </FormControl>
+                {!models && !modelsError && (
+                  <Typography variant="caption" color="text.secondary">
+                    Checking model availability…
+                  </Typography>
+                )}
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mt: 1 }}
+                >
+                  The SVM will be enabled after a compatible model is verified.
+                </Typography>
+              </Box>
+              <Divider />
               <Button
                 component="label"
                 variant="text"
                 sx={{
-                  minHeight: 180,
+                  minHeight: 160,
                   border: "1px dashed #aaa",
                   borderRadius: 1.5,
                   color: "#333",
@@ -169,28 +276,14 @@ function App() {
                   display: "flex",
                   flexDirection: "column",
                   gap: 0.5,
-                  "&:hover": {
-                    backgroundColor: "#faf9f6",
-                    borderColor: "#777",
-                  },
                 }}
               >
-                <Typography sx={{ fontWeight: 600 }}>
-                  Drop a wildlife photo here
+                <Typography sx={{fontWeight:600}}>
+                  Choose a wildlife photo
                 </Typography>
-
                 <Typography variant="body2" color="text.secondary">
-                  or choose one from your computer
+                  JPEG or PNG · Maximum 10 MB
                 </Typography>
-
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ mt: 1 }}
-                >
-                  JPG or PNG
-                </Typography>
-
                 <input
                   hidden
                   type="file"
@@ -198,7 +291,6 @@ function App() {
                   onChange={handleFileChange}
                 />
               </Button>
-
               {preview && (
                 <Box>
                   <Box
@@ -207,159 +299,154 @@ function App() {
                     alt="Selected wildlife"
                     sx={{
                       width: "100%",
-                      maxHeight: 420,
+                      maxHeight: 380,
                       objectFit: "contain",
-                      display: "block",
                       borderRadius: 1,
-                      backgroundColor: "#efede7",
+                      bgcolor: "#efede7",
                     }}
                   />
-
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ mt: 1, display: "block" }}
-                  >
+                  <Typography variant="caption" color="text.secondary">
                     {file?.name}
                   </Typography>
                 </Box>
               )}
-
               <Button
                 variant="contained"
                 onClick={handleSubmit}
-                disabled={!file || loading}
+                disabled={!file || loading || !modelAvailable}
                 sx={{
                   alignSelf: "flex-start",
                   px: 3,
                   py: 1.2,
                   borderRadius: 1.5,
                   textTransform: "none",
-                  backgroundColor: "#222",
+                  bgcolor: "#222",
                   boxShadow: "none",
-                  "&:hover": {
-                    backgroundColor: "#000",
-                    boxShadow: "none",
-                  },
+                  "&:hover": { bgcolor: "#000", boxShadow: "none" },
                 }}
               >
-                {loading ? "Identifying species..." : "Identify species"}
+                {loading ? (
+                  <>
+                    <CircularProgress
+                      size={17}
+                      color="inherit"
+                      sx={{ mr: 1 }}
+                    />
+                    Identifying species…
+                  </>
+                ) : (
+                  "Identify species"
+                )}
               </Button>
-
               {error && <Alert severity="error">{error}</Alert>}
             </Stack>
           </Paper>
 
           {prediction && (
             <Box>
-              <Divider sx={{ mb: 4 }} />
-
+              <Divider sx={{ mb: 3 }} />
               <Box
                 sx={{
                   display: "grid",
-                  gridTemplateColumns: {
-                    xs: "1fr",
-                    md: "1fr 1fr",
-                  },
+                  gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
                   gap: 4,
-                  alignItems: "start",
                 }}
               >
                 <Box>
                   <Typography variant="caption" color="text.secondary">
                     YOUR IMAGE
                   </Typography>
-
-                  <Box
-                    component="img"
-                    src={preview ?? ""}
-                    alt="Uploaded wildlife"
-                    sx={{
-                      width: "100%",
-                      mt: 1.5,
-                      aspectRatio: "4 / 3",
-                      objectFit: "cover",
-                      borderRadius: 1,
-                    }}
-                  />
+                  {preview && (
+                    <Box
+                      component="img"
+                      src={preview}
+                      alt="Uploaded wildlife"
+                      sx={{
+                        width: "100%",
+                        mt: 1.5,
+                        aspectRatio: "4 / 3",
+                        objectFit: "cover",
+                        borderRadius: 1,
+                      }}
+                    />
+                  )}
                 </Box>
-
                 <Box>
                   <Typography variant="caption" color="text.secondary">
-                    RESULT
+                    RESULT · {models?.[model]?.name ?? model.toUpperCase()}
                   </Typography>
-
                   <Typography
                     variant="h4"
                     sx={{
                       mt: 1.5,
                       fontWeight: 700,
-                      letterSpacing: "-0.03em",
+                      textTransform: "capitalize",
                     }}
                   >
                     {prediction.species}
                   </Typography>
-
-                  <Typography
-                    variant="body1"
-                    color="text.secondary"
-                    sx={{ mt: 0.5 }}
-                  >
-                    {(prediction.confidence * 100).toFixed(1)}% confidence
-                  </Typography>
-
-                  <Box sx={{ mt: 3 }}>
-                    <Typography
-                      variant="subtitle2"
-                      sx={{
-                        fontWeight: 600,
-                        mb: 2,
-                      }}
-                    >
-                      Top 3 predictions
+                  {isCNNPrediction(prediction) ? (
+                    <>
+                      <Typography color="text.secondary" sx={{ mt: 0.5 }}>
+                        {(prediction.confidence * 100).toFixed(1)}% CNN
+                        confidence
+                      </Typography>
+                      <Typography  sx={{ mt: 3, mb: 2, fontWeight:600 }}>
+                        Top 3 predictions
+                      </Typography>
+                      <Stack spacing={2}>
+                        {(prediction.top_predictions ?? []).map(
+                          (item, index) => (
+                            <Box key={`${item.species}-${index}`}>
+                              <Stack
+                                direction="row"
+                                
+                                sx={{ mb: 0.5, justifyContent:"space-between" }}
+                              >
+                                <Typography variant="body2">
+                                  {item.species}
+                                </Typography>
+                                <Typography variant="body2">
+                                  {(item.confidence * 100).toFixed(1)}%
+                                </Typography>
+                              </Stack>
+                              <Box
+                                sx={{
+                                  height: 6,
+                                  bgcolor: "#e7e5df",
+                                  borderRadius: 1,
+                                  overflow: "hidden",
+                                }}
+                              >
+                                <Box
+                                  sx={{
+                                    width: `${Math.min(
+                                      100,
+                                      Math.max(0, item.confidence * 100),
+                                    )}%`,
+                                    height: "100%",
+                                    bgcolor:
+                                      index === 0 ? "#454b40" : "#aaa99f",
+                                  }}
+                                />
+                              </Box>
+                            </Box>
+                          ),
+                        )}
+                      </Stack>
+                    </>
+                  ) : (
+                    <Typography color="text.secondary" sx={{ mt: 1 }}>
+                      SVM prediction (probability confidence unavailable).
                     </Typography>
-
-                    <Stack spacing={2}>
-                      {prediction.top_predictions.map((item, index) => (
-                        <Box key={`${item.species}-${index}`}>
-                          <Stack
-                            direction="row"
-                            sx={{ mb: 0.5, justifyContent: "space-between" }}
-                          >
-                            <Typography variant="body2">
-                              {item.species}
-                            </Typography>
-
-                            <Typography variant="body2">
-                              {(item.confidence * 100).toFixed(1)}%
-                            </Typography>
-                          </Stack>
-
-                          <Box
-                            sx={{
-                              height: 6,
-                              bgcolor: "#e7e5df",
-                              borderRadius: 1,
-                              overflow: "hidden",
-                            }}
-                          >
-                            <Box
-                              sx={{
-                                width: `${item.confidence * 100}%`,
-                                height: "100%",
-                                bgcolor: index === 0 ? "#454b40" : "#aaa99f",
-                                borderRadius: 1,
-                              }}
-                            />
-                          </Box>
-                        </Box>
-                      ))}
-                    </Stack>
-                  </Box>
+                  )}
+                  <Alert severity="info" sx={{ mt: 3 }}>
+                    Predictions may be incorrect. Confidence does not guarantee
+                    accuracy.
+                  </Alert>
                 </Box>
               </Box>
-
-              <Box sx={{ mt: 5 }}>
+              <Box sx={{ mt: 4 }}>
                 <Button
                   variant="text"
                   onClick={() => setShowDetails(!showDetails)}
@@ -374,71 +461,38 @@ function App() {
                     ? "Hide research details"
                     : "View research details"}
                 </Button>
-
                 <Collapse in={showDetails}>
-                  <Box
-                    sx={{
-                      mt: 2,
-                      pt: 2,
-                      borderTop: "1px solid #ddd",
-                    }}
+                  <Stack
+                    spacing={1}
+                    sx={{ mt: 2, pt: 2, borderTop: "1px solid #ddd" }}
                   >
-                    <Stack spacing={1.5}>
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                        }}
-                      >
-                        <Typography variant="body2">Model</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          CNN
-                        </Typography>
-                      </Box>
-
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                        }}
-                      >
-                        <Typography variant="body2">Dataset</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          WildlifeReID-10K
-                        </Typography>
-                      </Box>
-
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                        }}
-                      >
-                        <Typography variant="body2">Species classes</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          22
-                        </Typography>
-                      </Box>
-
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                        }}
-                      >
-                        <Typography variant="body2">API</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          REST
-                        </Typography>
-                      </Box>
+                    <Stack direction="row" sx={{justifyContent:"space-between"}}>
+                      <Typography>Model</Typography>
+                      <Typography color="text.secondary">
+                        {models?.[model]?.name ?? model}
+                      </Typography>
                     </Stack>
-                  </Box>
+                    <Stack direction="row" sx={{justifyContent:"space-between"}}>
+                      <Typography>Dataset</Typography>
+                      <Typography color="text.secondary">
+                        WildlifeReID-10K
+                      </Typography>
+                    </Stack>
+                    <Stack direction="row" sx={{justifyContent:"space-between"}}>
+                      <Typography>Species classes</Typography>
+                      <Typography color="text.secondary">22</Typography>
+                    </Stack>
+                    <Stack direction="row" sx={{justifyContent:"space-between"}}>
+                      <Typography>API</Typography>
+                      <Typography color="text.secondary">REST</Typography>
+                    </Stack>
+                  </Stack>
                 </Collapse>
               </Box>
             </Box>
           )}
-
-          <Typography variant="caption" color="text.secondary" sx={{ pt: 3 }}>
+          <ModelComparison />
+          <Typography variant="caption" color="text.secondary">
             Big data research project · Wildlife species classification
           </Typography>
         </Stack>

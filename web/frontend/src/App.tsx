@@ -9,12 +9,7 @@ import {
   CircularProgress,
   Collapse,
   Container,
-  Divider,
-  FormControl,
-  FormControlLabel,
   Paper,
-  Radio,
-  RadioGroup,
   Stack,
   Typography,
 } from "@mui/material";
@@ -22,7 +17,9 @@ import ModelComparison from "./components/ModelComparison";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
+
 type ModelId = "cnn" | "cnn_leakage_aware" | "svm";
+
 type ModelInfo = {
   name: string;
   available: boolean;
@@ -30,8 +27,16 @@ type ModelInfo = {
   classes: number;
   image_size: number;
 };
-type ModelRegistry = { models: Record<ModelId, ModelInfo> };
-type SpeciesPrediction = { species: string; confidence: number };
+
+type ModelRegistry = {
+  models: Record<ModelId, ModelInfo>;
+};
+
+type SpeciesPrediction = {
+  species: string;
+  confidence: number;
+};
+
 type CNNPrediction = {
   model_name?: "cnn" | "cnn_leakage_aware";
   species: string;
@@ -39,11 +44,56 @@ type CNNPrediction = {
   top_predictions: SpeciesPrediction[];
   timing?: Record<string, number>;
 };
-type SVMPrediction = { model: "svm"; species: string; decision_score?: number };
+
+type SVMPrediction = {
+  model: "svm";
+  species: string;
+  decision_score?: number;
+};
+
 type Prediction = CNNPrediction | SVMPrediction;
 
 const isCNNPrediction = (prediction: Prediction): prediction is CNNPrediction =>
   "confidence" in prediction;
+
+const palette = {
+  forest: "#14251B",
+  forestLight: "#243B2C",
+  moss: "#526B4F",
+  sage: "#C7DB9B",
+  ivory: "#F5F2E9",
+  white: "#FFFFFF",
+  muted: "#68776A",
+  border: "#E2E6DC",
+};
+
+const modelOptions: {
+  id: ModelId;
+  title: string;
+  subtitle: string;
+  number: string;
+}[] = [
+  {
+    id: "cnn",
+    title: "Original CNN",
+    subtitle: "Deep learning · Original model",
+    number: "01",
+  },
+  {
+    id: "cnn_leakage_aware",
+    title: "Leakage-Aware CNN",
+    subtitle: "Deep learning · Alternative model",
+    number: "02",
+  },
+  {
+    id: "svm",
+    title: "HOG + SVM",
+    subtitle: "Traditional machine learning",
+    number: "03",
+  },
+];
+
+const formatSpecies = (name: string) => name.replace(/[_-]/g, " ");
 
 function App() {
   const [models, setModels] = useState<ModelRegistry["models"] | null>(null);
@@ -58,23 +108,29 @@ function App() {
 
   useEffect(() => {
     const controller = new AbortController();
+
     async function fetchModels() {
       try {
         const response = await fetch(`${API_URL}/models`, {
           signal: controller.signal,
         });
-        if (!response.ok)
+
+        if (!response.ok) {
           throw new Error("Unable to retrieve model availability.");
+        }
+
         const data: ModelRegistry = await response.json();
         setModels(data.models);
         setModelsError("");
       } catch (err) {
         if (controller.signal.aborted) return;
+
         setModelsError(
           err instanceof Error ? err.message : "Cannot connect to the API.",
         );
       }
     }
+
     void fetchModels();
     return () => controller.abort();
   }, []);
@@ -84,28 +140,38 @@ function App() {
       setPreview(null);
       return;
     }
+
     const url = URL.createObjectURL(file);
     setPreview(url);
+
     return () => URL.revokeObjectURL(url);
   }, [file]);
+
+  const resetPrediction = () => {
+    setPrediction(null);
+    setError("");
+    setShowDetails(false);
+  };
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const selected = event.target.files?.[0];
     if (!selected) return;
+
     event.target.value = "";
-    setPrediction(null);
-    setShowDetails(false);
-    setError("");
+    resetPrediction();
+
     if (!["image/jpeg", "image/png"].includes(selected.type)) {
       setFile(null);
       setError("Please select a JPEG or PNG image.");
       return;
     }
+
     if (selected.size > MAX_FILE_BYTES) {
       setFile(null);
       setError("The image must be 10 MB or smaller.");
       return;
     }
+
     setFile(selected);
   };
 
@@ -114,35 +180,45 @@ function App() {
       setError("Please choose an image first.");
       return;
     }
+
     if (!models?.[model]?.available) {
       setError("This model is not available for predictions yet.");
       return;
     }
+
     setLoading(true);
     setError("");
     setPrediction(null);
+
     const formData = new FormData();
     formData.append("file", file);
+
     try {
       const endpoint =
         model === "svm"
           ? "/predict/svm"
           : `/predict?model_name=${encodeURIComponent(model)}`;
+
       const response = await fetch(`${API_URL}${endpoint}`, {
         method: "POST",
         body: formData,
       });
+
       const data: unknown = await response.json().catch(() => null);
+
       if (!response.ok) {
         const detail =
           data && typeof data === "object" && "detail" in data
             ? String(data.detail)
             : "Unable to classify this image.";
+
         throw new Error(detail);
       }
+
       if (!data || typeof data !== "object" || !("species" in data)) {
         throw new Error("The API returned an unexpected prediction response.");
       }
+
       setPrediction(data as Prediction);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
@@ -157,344 +233,719 @@ function App() {
     <Box
       sx={{
         minHeight: "100vh",
-        bgcolor: "#f7f5f0",
-        color: "#222",
-        py: { xs: 4, md: 7 },
+        bgcolor: palette.ivory,
+        color: palette.forest,
       }}
     >
-      <Container maxWidth="lg">
-        <Stack spacing={4}>
+      {/* Navigation */}
+      <Box
+        sx={{
+          bgcolor: palette.forest,
+          borderBottom: "1px solid #354839",
+        }}
+      >
+        <Container maxWidth="lg">
           <Stack
             direction="row"
-            sx={{justifyContent:"space-between",
-            alignItems:"center"}}
+            sx={{
+              py: 2.5,
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
           >
-            <Typography sx={{fontWeight:700}}>Wildlife Classifier</Typography>
-            <Typography variant="body2" color="text.secondary">
-              WildlifeReID-10K
-            </Typography>
-          </Stack>
-          <Box>
-            <Typography
-              variant="h3"
+            <Stack direction="row" sx={{ alignItems: "center" }} spacing={1.5}>
+              <Box
+                sx={{
+                  width: 38,
+                  height: 38,
+                  bgcolor: palette.sage,
+                  color: palette.forest,
+                  borderRadius: 2,
+                  display: "grid",
+                  placeItems: "center",
+                  fontWeight: 900,
+                  fontSize: 20,
+                }}
+              >
+                W
+              </Box>
+
+              <Box>
+                <Typography
+                  sx={{
+                    color: palette.white,
+                    fontWeight: 800,
+                    letterSpacing: "0.08em",
+                    lineHeight: 1.2,
+                  }}
+                >
+                  WILDTRACE
+                  <Box component="span" sx={{ color: palette.sage }}>
+                    {" "}
+                    AI
+                  </Box>
+                </Typography>
+
+                <Typography
+                  sx={{
+                    color: "#B8C6B7",
+                    fontSize: 10,
+                    letterSpacing: "0.18em",
+                  }}
+                >
+                  WILDLIFE INTELLIGENCE LAB
+                </Typography>
+              </Box>
+            </Stack>
+
+            <Chip
+              label="RESEARCH PROTOTYPE"
+              size="small"
               sx={{
+                bgcolor: "#2B4131",
+                color: palette.sage,
+                fontSize: 10,
                 fontWeight: 700,
-                fontSize: { xs: "2.1rem", md: "3.1rem" },
-                letterSpacing: "-0.04em",
+                letterSpacing: "0.08em",
+                display: { xs: "none", sm: "flex" },
+              }}
+            />
+          </Stack>
+        </Container>
+      </Box>
+
+      {/* Hero */}
+      <Box
+        sx={{
+          bgcolor: palette.forest,
+          color: palette.white,
+          position: "relative",
+          overflow: "hidden",
+          py: { xs: 7, md: 10 },
+          backgroundImage:
+            "radial-gradient(circle at 90% 20%, #36533C 0%, transparent 40%)",
+        }}
+      >
+        <Container maxWidth="lg">
+          <Box sx={{ maxWidth: 760, position: "relative" }}>
+            <Typography
+              sx={{
+                color: palette.sage,
+                fontSize: 12,
+                fontWeight: 700,
+                letterSpacing: "0.22em",
+                mb: 2,
               }}
             >
-              Identifying an animal species
+              AI-POWERED SPECIES RECOGNITION
             </Typography>
-            <Typography color="text.secondary" sx={{ mt: 2, maxWidth: 650 }}>
-              Upload a wildlife photo and choose a classification model to
-              identify which of the 22 species it most closely matches.
+
+            <Typography
+              component="h1"
+              sx={{
+                fontSize: { xs: "2.7rem", md: "4.5rem" },
+                fontWeight: 800,
+                letterSpacing: "-0.055em",
+                lineHeight: 1.08,
+                mb: 3,
+              }}
+            >
+              Discover wildlife.
+              <Box
+                component="span"
+                sx={{ color: palette.sage, display: "block" }}
+              >
+                Through intelligence.
+              </Box>
+            </Typography>
+
+            <Typography
+              sx={{
+                color: "#C4D0C2",
+                fontSize: { xs: 15, md: 17 },
+                maxWidth: 600,
+                lineHeight: 1.8,
+              }}
+            >
+              Explore wildlife species classification using neural networks and
+              traditional machine learning. Upload an image to discover which of
+              22 species a model predicts.
+            </Typography>
+
+            <Stack direction="row" sx={{ mt: 4, flexWrap: "wrap", gap: 1.5 }}>
+              {[
+                "22 species classes",
+                "2 live CNN models",
+                "WildlifeReID-10K",
+              ].map((item) => (
+                <Chip
+                  key={item}
+                  label={item}
+                  sx={{
+                    bgcolor: "#29412F",
+                    color: "#E0E9DA",
+                    border: "1px solid #46604A",
+                  }}
+                />
+              ))}
+            </Stack>
+          </Box>
+        </Container>
+      </Box>
+
+      <Container maxWidth="lg" sx={{ py: { xs: 5, md: 8 } }}>
+        <Stack spacing={6}>
+          {/* Workspace introduction */}
+          <Box>
+            <Typography
+              sx={{
+                color: palette.moss,
+                fontSize: 12,
+                fontWeight: 800,
+                letterSpacing: "0.18em",
+                mb: 1,
+              }}
+            >
+              CLASSIFICATION WORKSPACE
+            </Typography>
+
+            <Typography
+              variant="h4"
+              sx={{
+                fontWeight: 800,
+                letterSpacing: "-0.04em",
+                mb: 1,
+              }}
+            >
+              Identify a species
+            </Typography>
+
+            <Typography sx={{ color: palette.muted }}>
+              Select a model, upload your image and explore the result.
             </Typography>
           </Box>
 
-          <Paper
-            variant="outlined"
-            sx={{ p: { xs: 2, md: 3 }, borderRadius: 2, boxShadow: "none" }}
-          >
-            <Stack spacing={3}>
-              <Box>
-                <Typography  sx={{ mb: 1, fontWeight:600 }}>
-                  Classification model
-                </Typography>
-                {modelsError && (
-                  <Alert severity="warning" sx={{ mb: 2 }}>
-                    {modelsError}
-                  </Alert>
-                )}
-                <FormControl>
-                  <RadioGroup
-                    value={model}
-                    onChange={(event) => {
-                      setModel(event.target.value as ModelId);
-                      setPrediction(null);
-                      setError("");
-                      setShowDetails(false);
+          {/* Model selection */}
+          <Box>
+            <Typography sx={{ fontWeight: 800, mb: 2 }}>
+              01 / Choose a classification model
+            </Typography>
+
+            {modelsError && (
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                {modelsError}
+              </Alert>
+            )}
+
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: {
+                  xs: "1fr",
+                  md: "repeat(3, 1fr)",
+                },
+                gap: 2,
+              }}
+            >
+              {modelOptions.map((option) => {
+                const available = models?.[option.id]?.available ?? false;
+                const selected = model === option.id;
+
+                return (
+                  <Paper
+                    key={option.id}
+                    component="button"
+                    type="button"
+                    disabled={!available || loading}
+                    onClick={() => {
+                      setModel(option.id);
+                      resetPrediction();
+                    }}
+                    elevation={0}
+                    sx={{
+                      p: 3,
+                      textAlign: "left",
+                      fontFamily: "inherit",
+                      cursor: available ? "pointer" : "not-allowed",
+                      borderRadius: 3,
+                      bgcolor: selected ? palette.forest : palette.white,
+                      color: selected ? palette.white : palette.forest,
+                      border: selected
+                        ? `2px solid ${palette.forest}`
+                        : `2px solid ${palette.border}`,
+                      opacity: available ? 1 : 0.62,
+                      transition: "all 0.2s ease",
+                      "&:hover": available
+                        ? {
+                            borderColor: palette.moss,
+                            transform: "translateY(-2px)",
+                          }
+                        : {},
                     }}
                   >
-                    {(["cnn", "cnn_leakage_aware", "svm"] as const).map((id) => (
-                      <FormControlLabel
-                        key={id}
-                        value={id}
-                        disabled={!models?.[id]?.available}
-                        control={<Radio />}
-                        label={
-                          <Stack
-                            direction="row"
-                            sx={{alignItems:"center"}}
-                            spacing={1}
-                          >
-                            <Typography>
-                              {models?.[id]?.name ??
-                                (id === "cnn"
-                                  ? "Original CNN"
-                                  : id === "cnn_leakage_aware"
-                                    ? "Leakage-Aware CNN"
-                                    : "HOG + SVM (Traditional ML)")}
-                            </Typography>
-                            <Chip
-                              size="small"
-                              variant="outlined"
-                              label={
-                                models?.[id]?.available
-                                  ? "Available"
-                                  : "Pending"
-                              }
-                            />
-                          </Stack>
-                        }
-                      />
-                    ))}
-                  </RadioGroup>
-                </FormControl>
-                {!models && !modelsError && (
-                  <Typography variant="caption" color="text.secondary">
-                    Checking model availability…
-                  </Typography>
-                )}
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ mt: 1 }}
-                >
-                  The SVM will be enabled after a compatible model is verified.
-                </Typography>
-              </Box>
-              <Divider />
-              <Button
-                component="label"
-                variant="text"
-                sx={{
-                  minHeight: 160,
-                  border: "1px dashed #aaa",
-                  borderRadius: 1.5,
-                  color: "#333",
-                  textTransform: "none",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 0.5,
-                }}
-              >
-                <Typography sx={{fontWeight:600}}>
-                  Choose a wildlife photo
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  JPEG or PNG · Maximum 10 MB
-                </Typography>
-                <input
-                  hidden
-                  type="file"
-                  accept="image/png,image/jpeg"
-                  onChange={handleFileChange}
-                />
-              </Button>
-              {preview && (
-                <Box>
-                  <Box
-                    component="img"
-                    src={preview}
-                    alt="Selected wildlife"
-                    sx={{
-                      width: "100%",
-                      maxHeight: 380,
-                      objectFit: "contain",
-                      borderRadius: 1,
-                      bgcolor: "#efede7",
-                    }}
-                  />
-                  <Typography variant="caption" color="text.secondary">
-                    {file?.name}
-                  </Typography>
-                </Box>
-              )}
-              <Button
-                variant="contained"
-                onClick={handleSubmit}
-                disabled={!file || loading || !modelAvailable}
-                sx={{
-                  alignSelf: "flex-start",
-                  px: 3,
-                  py: 1.2,
-                  borderRadius: 1.5,
-                  textTransform: "none",
-                  bgcolor: "#222",
-                  boxShadow: "none",
-                  "&:hover": { bgcolor: "#000", boxShadow: "none" },
-                }}
-              >
-                {loading ? (
-                  <>
-                    <CircularProgress
-                      size={17}
-                      color="inherit"
-                      sx={{ mr: 1 }}
-                    />
-                    Identifying species…
-                  </>
-                ) : (
-                  "Identify species"
-                )}
-              </Button>
-              {error && <Alert severity="error">{error}</Alert>}
-            </Stack>
-          </Paper>
+                    <Stack spacing={2}>
+                      <Stack
+                        direction="row"
+                        sx={{
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            color: selected ? palette.sage : palette.moss,
+                            fontWeight: 800,
+                            fontSize: 13,
+                          }}
+                        >
+                          {option.number}
+                        </Typography>
 
-          {prediction && (
-            <Box>
-              <Divider sx={{ mb: 3 }} />
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
-                  gap: 4,
-                }}
+                        <Chip
+                          label={available ? "LIVE" : "RESULTS ONLY"}
+                          size="small"
+                          sx={{
+                            bgcolor: selected ? "#37513C" : "#EDF1E9",
+                            color: selected ? palette.sage : palette.moss,
+                            fontWeight: 800,
+                            fontSize: 10,
+                          }}
+                        />
+                      </Stack>
+
+                      <Box>
+                        <Typography
+                          sx={{
+                            fontWeight: 800,
+                            fontSize: 19,
+                            mb: 0.5,
+                          }}
+                        >
+                          {option.title}
+                        </Typography>
+
+                        <Typography
+                          sx={{
+                            color: selected ? "#BFCDBD" : palette.muted,
+                            fontSize: 13,
+                          }}
+                        >
+                          {option.subtitle}
+                        </Typography>
+                      </Box>
+
+                      <Typography
+                        sx={{
+                          fontSize: 12,
+                          color: selected ? palette.sage : palette.moss,
+                          fontWeight: 700,
+                        }}
+                      >
+                        {available
+                          ? selected
+                            ? "● Selected"
+                            : "Select model →"
+                          : "Live inference unavailable"}
+                      </Typography>
+                    </Stack>
+                  </Paper>
+                );
+              })}
+            </Box>
+
+            {!models && !modelsError && (
+              <Typography
+                variant="caption"
+                sx={{ color: palette.muted, mt: 1, display: "block" }}
               >
-                <Box>
-                  <Typography variant="caption" color="text.secondary">
-                    YOUR IMAGE
+                Checking model availability…
+              </Typography>
+            )}
+          </Box>
+
+          {/* Upload */}
+          <Box>
+            <Typography sx={{ fontWeight: 800, mb: 2 }}>
+              02 / Upload a wildlife image
+            </Typography>
+
+            <Paper
+              elevation={0}
+              sx={{
+                p: { xs: 2, md: 4 },
+                borderRadius: 4,
+                border: `1px solid ${palette.border}`,
+                bgcolor: palette.white,
+              }}
+            >
+              <Stack spacing={3}>
+                <Button
+                  component="label"
+                  variant="text"
+                  disabled={loading}
+                  sx={{
+                    minHeight: preview ? 100 : 230,
+                    border: `2px dashed ${palette.border}`,
+                    borderRadius: 3,
+                    bgcolor: "#FAFBF7",
+                    color: palette.forest,
+                    textTransform: "none",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 1,
+                    "&:hover": {
+                      bgcolor: "#F1F5EA",
+                      borderColor: palette.moss,
+                    },
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 54,
+                      height: 54,
+                      borderRadius: 3,
+                      bgcolor: "#E7EEDC",
+                      display: "grid",
+                      placeItems: "center",
+                      fontSize: 26,
+                    }}
+                  >
+                    ↑
+                  </Box>
+
+                  <Typography sx={{ fontWeight: 800 }}>
+                    {file
+                      ? "Choose a different image"
+                      : "Choose a wildlife photograph"}
                   </Typography>
-                  {preview && (
+
+                  <Typography sx={{ color: palette.muted, fontSize: 13 }}>
+                    JPEG or PNG · Maximum 10 MB
+                  </Typography>
+
+                  <input
+                    hidden
+                    type="file"
+                    accept="image/png,image/jpeg"
+                    onChange={handleFileChange}
+                  />
+                </Button>
+
+                {preview && (
+                  <Box>
                     <Box
                       component="img"
                       src={preview}
-                      alt="Uploaded wildlife"
+                      alt="Selected wildlife"
                       sx={{
                         width: "100%",
-                        mt: 1.5,
-                        aspectRatio: "4 / 3",
-                        objectFit: "cover",
-                        borderRadius: 1,
+                        maxHeight: 420,
+                        objectFit: "contain",
+                        borderRadius: 3,
+                        bgcolor: "#F0F2EA",
                       }}
                     />
-                  )}
-                </Box>
-                <Box>
-                  <Typography variant="caption" color="text.secondary">
-                    RESULT · {models?.[model]?.name ?? model.toUpperCase()}
-                  </Typography>
-                  <Typography
-                    variant="h4"
-                    sx={{
-                      mt: 1.5,
-                      fontWeight: 700,
-                      textTransform: "capitalize",
-                    }}
-                  >
-                    {prediction.species}
-                  </Typography>
-                  {isCNNPrediction(prediction) ? (
-                    <>
-                      <Typography color="text.secondary" sx={{ mt: 0.5 }}>
-                        {(prediction.confidence * 100).toFixed(1)}% CNN
-                        confidence
-                      </Typography>
-                      <Typography  sx={{ mt: 3, mb: 2, fontWeight:600 }}>
-                        Top 3 predictions
-                      </Typography>
-                      <Stack spacing={2}>
-                        {(prediction.top_predictions ?? []).map(
-                          (item, index) => (
-                            <Box key={`${item.species}-${index}`}>
-                              <Stack
-                                direction="row"
-                                
-                                sx={{ mb: 0.5, justifyContent:"space-between" }}
-                              >
-                                <Typography variant="body2">
-                                  {item.species}
-                                </Typography>
-                                <Typography variant="body2">
-                                  {(item.confidence * 100).toFixed(1)}%
-                                </Typography>
-                              </Stack>
-                              <Box
-                                sx={{
-                                  height: 6,
-                                  bgcolor: "#e7e5df",
-                                  borderRadius: 1,
-                                  overflow: "hidden",
-                                }}
-                              >
-                                <Box
-                                  sx={{
-                                    width: `${Math.min(
-                                      100,
-                                      Math.max(0, item.confidence * 100),
-                                    )}%`,
-                                    height: "100%",
-                                    bgcolor:
-                                      index === 0 ? "#454b40" : "#aaa99f",
-                                  }}
-                                />
-                              </Box>
-                            </Box>
-                          ),
-                        )}
-                      </Stack>
-                    </>
-                  ) : (
-                    <Typography color="text.secondary" sx={{ mt: 1 }}>
-                      SVM prediction (probability confidence unavailable).
+
+                    <Typography
+                      sx={{
+                        mt: 1,
+                        color: palette.muted,
+                        fontSize: 12,
+                        overflowWrap: "anywhere",
+                      }}
+                    >
+                      {file?.name}
                     </Typography>
-                  )}
-                  <Alert severity="info" sx={{ mt: 3 }}>
-                    Predictions may be incorrect. Confidence does not guarantee
-                    accuracy.
-                  </Alert>
-                </Box>
-              </Box>
-              <Box sx={{ mt: 4 }}>
+                  </Box>
+                )}
+
                 <Button
-                  variant="text"
-                  onClick={() => setShowDetails(!showDetails)}
+                  variant="contained"
+                  onClick={handleSubmit}
+                  disabled={!file || loading || !modelAvailable}
                   sx={{
-                    px: 0,
-                    color: "#222",
+                    alignSelf: { xs: "stretch", sm: "flex-start" },
+                    bgcolor: palette.forest,
+                    color: palette.white,
+                    px: 4,
+                    py: 1.5,
+                    borderRadius: 2,
+                    fontWeight: 800,
                     textTransform: "none",
-                    fontWeight: 600,
+                    boxShadow: "none",
+                    "&:hover": {
+                      bgcolor: palette.forestLight,
+                      boxShadow: "none",
+                    },
                   }}
                 >
-                  {showDetails
-                    ? "Hide research details"
-                    : "View research details"}
+                  {loading ? (
+                    <>
+                      <CircularProgress
+                        size={17}
+                        color="inherit"
+                        sx={{ mr: 1 }}
+                      />
+                      Identifying species…
+                    </>
+                  ) : (
+                    "Identify species →"
+                  )}
                 </Button>
-                <Collapse in={showDetails}>
-                  <Stack
-                    spacing={1}
-                    sx={{ mt: 2, pt: 2, borderTop: "1px solid #ddd" }}
+
+                {error && <Alert severity="error">{error}</Alert>}
+              </Stack>
+            </Paper>
+          </Box>
+
+          {/* Prediction */}
+          {prediction && (
+            <Box>
+              <Typography sx={{ fontWeight: 800, mb: 2 }}>
+                03 / Classification result
+              </Typography>
+
+              <Paper
+                elevation={0}
+                sx={{
+                  overflow: "hidden",
+                  borderRadius: 4,
+                  border: `1px solid ${palette.border}`,
+                }}
+              >
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: {
+                      xs: "1fr",
+                      md: "1fr 1fr",
+                    },
+                  }}
+                >
+                  <Box
+                    sx={{
+                      bgcolor: "#E8EDE4",
+                      minHeight: 330,
+                    }}
                   >
-                    <Stack direction="row" sx={{justifyContent:"space-between"}}>
-                      <Typography>Model</Typography>
-                      <Typography color="text.secondary">
-                        {models?.[model]?.name ?? model}
+                    {preview && (
+                      <Box
+                        component="img"
+                        src={preview}
+                        alt="Classified wildlife"
+                        sx={{
+                          width: "100%",
+                          height: "100%",
+                          minHeight: 330,
+                          maxHeight: 500,
+                          objectFit: "contain",
+                          display: "block",
+                        }}
+                      />
+                    )}
+                  </Box>
+
+                  <Box sx={{ p: { xs: 3, md: 4 } }}>
+                    <Typography
+                      sx={{
+                        color: palette.moss,
+                        fontWeight: 800,
+                        fontSize: 11,
+                        letterSpacing: "0.16em",
+                        mb: 2,
+                      }}
+                    >
+                      PREDICTED SPECIES
+                    </Typography>
+
+                    <Typography
+                      variant="h3"
+                      sx={{
+                        fontWeight: 800,
+                        textTransform: "capitalize",
+                        letterSpacing: "-0.04em",
+                        overflowWrap: "anywhere",
+                      }}
+                    >
+                      {formatSpecies(prediction.species)}
+                    </Typography>
+
+                    {isCNNPrediction(prediction) ? (
+                      <>
+                        <Typography
+                          sx={{
+                            color: palette.moss,
+                            fontWeight: 800,
+                            fontSize: 24,
+                            mt: 1,
+                          }}
+                        >
+                          {(prediction.confidence * 100).toFixed(1)}%
+                        </Typography>
+
+                        <Typography
+                          sx={{
+                            color: palette.muted,
+                            fontSize: 12,
+                          }}
+                        >
+                          Model confidence
+                        </Typography>
+
+                        <Typography sx={{ fontWeight: 800, mt: 4, mb: 2 }}>
+                          Top predictions
+                        </Typography>
+
+                        <Stack spacing={2}>
+                          {(prediction.top_predictions ?? []).map(
+                            (item, index) => (
+                              <Box key={`${item.species}-${index}`}>
+                                <Stack
+                                  direction="row"
+                                  sx={{
+                                    mb: 0.7,
+                                    justifyContent: "space-between",
+                                  }}
+                                >
+                                  <Typography
+                                    sx={{
+                                      fontSize: 13,
+                                      textTransform: "capitalize",
+                                    }}
+                                  >
+                                    {formatSpecies(item.species)}
+                                  </Typography>
+
+                                  <Typography
+                                    sx={{
+                                      fontSize: 13,
+                                      fontWeight: 800,
+                                    }}
+                                  >
+                                    {(item.confidence * 100).toFixed(1)}%
+                                  </Typography>
+                                </Stack>
+
+                                <Box
+                                  sx={{
+                                    height: 8,
+                                    bgcolor: "#E9EEE5",
+                                    borderRadius: 4,
+                                    overflow: "hidden",
+                                  }}
+                                >
+                                  <Box
+                                    sx={{
+                                      height: "100%",
+                                      width: `${Math.min(
+                                        100,
+                                        Math.max(0, item.confidence * 100),
+                                      )}%`,
+                                      bgcolor:
+                                        index === 0 ? palette.moss : "#AFC2A1",
+                                      borderRadius: 4,
+                                    }}
+                                  />
+                                </Box>
+                              </Box>
+                            ),
+                          )}
+                        </Stack>
+                      </>
+                    ) : (
+                      <Typography sx={{ color: palette.muted, mt: 2 }}>
+                        SVM prediction. Probability confidence is unavailable.
                       </Typography>
+                    )}
+
+                    <Alert severity="info" sx={{ mt: 4 }}>
+                      This is a model prediction, not a confirmed species
+                      identification.
+                    </Alert>
+                  </Box>
+                </Box>
+
+                <Box
+                  sx={{
+                    p: 3,
+                    borderTop: `1px solid ${palette.border}`,
+                    bgcolor: palette.white,
+                  }}
+                >
+                  <Button
+                    onClick={() => setShowDetails(!showDetails)}
+                    sx={{
+                      color: palette.forest,
+                      fontWeight: 800,
+                      textTransform: "none",
+                    }}
+                  >
+                    {showDetails
+                      ? "Hide research details ↑"
+                      : "View research details ↓"}
+                  </Button>
+
+                  <Collapse in={showDetails}>
+                    <Stack spacing={2} sx={{ mt: 2 }}>
+                      {[
+                        ["Model", models?.[model]?.name ?? model],
+                        ["Dataset", "WildlifeReID-10K"],
+                        [
+                          "Species classes",
+                          String(models?.[model]?.classes ?? 22),
+                        ],
+                        ["API", "FastAPI REST"],
+                      ].map(([label, value]) => (
+                        <Stack
+                          key={label}
+                          direction="row"
+                          sx={{ justifyContent: "space-between", gap: 2 }}
+                        >
+                          <Typography sx={{ fontSize: 13, fontWeight: 700 }}>
+                            {label}
+                          </Typography>
+                          <Typography
+                            sx={{
+                              fontSize: 13,
+                              color: palette.muted,
+                              textAlign: "right",
+                            }}
+                          >
+                            {value}
+                          </Typography>
+                        </Stack>
+                      ))}
                     </Stack>
-                    <Stack direction="row" sx={{justifyContent:"space-between"}}>
-                      <Typography>Dataset</Typography>
-                      <Typography color="text.secondary">
-                        WildlifeReID-10K
-                      </Typography>
-                    </Stack>
-                    <Stack direction="row" sx={{justifyContent:"space-between"}}>
-                      <Typography>Species classes</Typography>
-                      <Typography color="text.secondary">22</Typography>
-                    </Stack>
-                    <Stack direction="row" sx={{justifyContent:"space-between"}}>
-                      <Typography>API</Typography>
-                      <Typography color="text.secondary">REST</Typography>
-                    </Stack>
-                  </Stack>
-                </Collapse>
-              </Box>
+                  </Collapse>
+                </Box>
+              </Paper>
             </Box>
           )}
+
+          {/* Existing comparison component */}
           <ModelComparison />
-          <Typography variant="caption" color="text.secondary">
-            Big data research project · Wildlife species classification
-          </Typography>
+
+          {/* Footer */}
+          <Box
+            sx={{
+              pt: 3,
+              borderTop: `1px solid ${palette.border}`,
+            }}
+          >
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              sx={{ justifyContent: "space-between" }}
+              spacing={1}
+            >
+              <Typography sx={{ fontSize: 12, color: palette.muted }}>
+                © WildTrace AI · Wildlife species classification research
+              </Typography>
+
+              <Typography sx={{ fontSize: 12, color: palette.muted }}>
+                Powered by React + FastAPI
+              </Typography>
+            </Stack>
+          </Box>
         </Stack>
       </Container>
     </Box>

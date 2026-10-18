@@ -12,33 +12,29 @@ import {
 
 type Metric = {
   label: string;
-  cnn: number | null;
-  svm: number | null;
+  original: number;
+  clean: number;
 };
 
 const metrics: Metric[] = [
-  { label: "Accuracy", cnn: 84.0, svm: 80.87 }, //  { label: "Accuracy", cnn: null, svm: 83.34 },
-  { label: "Macro F1-score", cnn: null, svm: 79.98 },
-  { label: "Macro precision", cnn: null, svm: 78.23 },
-  { label: "Macro recall", cnn: null, svm: 82.65 },
+  { label: "Accuracy", original: 83.34, clean: 80.87 },
+  { label: "Macro F1-score", original: 82.11, clean: 79.98 },
+  { label: "Macro precision", original: 81.20, clean: 78.23 },
+  { label: "Macro recall", original: 83.39, clean: 82.65 },
 ];
 
-function MetricValue({
-  value,
-}: {
-  value: number | null;
-}) {
-  if (value === null) {
-    return (
-      <Typography variant="body2" color="text.secondary">
-        Not verified
-      </Typography>
-    );
-  }
+const palette = {
+  forest: "#14251B",
+  moss: "#526B4F",
+  sage: "#C7DB9B",
+  muted: "#68776A",
+  border: "#E2E6DC",
+};
 
+function MetricValue({ value }: { value: number }) {
   return (
-    <Stack spacing={0.5}>
-      <Typography variant="body2" sx={{fontWeight:600}}>
+    <Stack spacing={0.75}>
+      <Typography sx={{ fontWeight: 800, fontSize: 15 }}>
         {value.toFixed(2)}%
       </Typography>
 
@@ -46,8 +42,13 @@ function MetricValue({
         variant="determinate"
         value={value}
         sx={{
-          height: 7,
-          borderRadius: 2,
+          height: 8,
+          borderRadius: 4,
+          bgcolor: "#E9EEE5",
+          "& .MuiLinearProgress-bar": {
+            bgcolor: palette.moss,
+            borderRadius: 4,
+          },
         }}
       />
     </Stack>
@@ -56,41 +57,84 @@ function MetricValue({
 
 export default function ModelComparison() {
   return (
-    <Card variant="outlined" sx={{ borderRadius: 3 }}>
-      <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+    <Card
+      variant="outlined"
+      sx={{
+        borderRadius: 4,
+        borderColor: palette.border,
+        boxShadow: "none",
+      }}
+    >
+      <CardContent sx={{ p: { xs: 3, md: 4 } }}>
         <Stack spacing={3}>
           <Box>
-            <Typography variant="h5" sx={{fontWeight:700}}>
+            <Typography
+              sx={{
+                color: palette.moss,
+                fontSize: 12,
+                fontWeight: 800,
+                letterSpacing: "0.18em",
+                mb: 1,
+              }}
+            >
+              RESEARCH & EVALUATION
+            </Typography>
+
+            <Typography
+              variant="h5"
+              sx={{
+                color: palette.forest,
+                fontWeight: 800,
+              }}
+            >
               Model Performance Comparison
             </Typography>
 
             <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{ mt: 1 }}
+              sx={{
+                color: palette.muted,
+                mt: 1,
+                lineHeight: 1.7,
+              }}
             >
-              Previously reported evaluation results for
-              wildlife species classification.
+              Explore previously reported evaluation results
+              for wildlife species classification.
             </Typography>
           </Box>
 
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            spacing={2}
-          >
+          <Stack direction="row" sx={{flexWrap:"wrap", gap:1}}>
             <Chip
-              label="CNN: Live inference available"
-              color="success"
-              variant="outlined"
+              label="2 CNN models · Live"
+              size="small"
+              sx={{
+                bgcolor: "#EDF3E6",
+                color: palette.forest,
+                fontWeight: 700,
+              }}
             />
 
             <Chip
-              label="SVM: Evaluation results only"
-              variant="outlined"
+              label="2 SVM models · Live"
+              size="small"
+              sx={{
+                bgcolor: "#EDF3E6",
+                color: palette.forest,
+                fontWeight: 700,
+              }}
             />
           </Stack>
 
           <Divider />
+
+          <Typography
+            sx={{
+              fontWeight: 800,
+              color: palette.forest,
+              fontSize: 17,
+            }}
+          >
+            Previously reported HOG + SVM results
+          </Typography>
 
           <Box
             sx={{
@@ -99,55 +143,64 @@ export default function ModelComparison() {
                 xs: "1fr",
                 md: "1fr 1fr",
               },
-              gap: 3,
+              gap: 2,
             }}
           >
-            <Box>
-              <Typography
-                variant="subtitle1"
-                sx={{fontWeight:700}}
-                gutterBottom
-              >
-                CNN
+            <Box
+              sx={{
+                p: 2.5,
+                borderRadius: 3,
+                bgcolor: "#F6F8F3",
+              }}
+            >
+              <Typography sx={{ fontWeight: 800 }}>
+                Original / Experiment Split
               </Typography>
 
               <Typography
-                variant="body2"
-                color="text.secondary"
-                gutterBottom
+                sx={{
+                  color: palette.muted,
+                  fontSize: 13,
+                  mt: 1,
+                }}
               >
-                Convolutional Neural Network
+                30,561 test images
               </Typography>
 
               <Chip
+                label="Not identity-disjoint"
                 size="small"
-                label="Provisional evaluation"
-                sx={{ mt: 1 }}
+                variant="outlined"
+                sx={{ mt: 2 }}
               />
             </Box>
 
-            <Box>
-              <Typography
-                variant="subtitle1"
-                sx={{fontWeight:700}}
-                gutterBottom
-              >
-                HOG + SVM
+            <Box
+              sx={{
+                p: 2.5,
+                borderRadius: 3,
+                bgcolor: "#F6F8F3",
+              }}
+            >
+              <Typography sx={{ fontWeight: 800 }}>
+                Clean / Leakage-Aware Split
               </Typography>
 
               <Typography
-                variant="body2"
-                color="text.secondary"
-                gutterBottom
+                sx={{
+                  color: palette.muted,
+                  fontSize: 13,
+                  mt: 1,
+                }}
               >
-                Histogram of Oriented Gradients
-                with Support Vector Machine
+                23,178 test images
               </Typography>
 
               <Chip
+                label="Identity-disjoint"
                 size="small"
-label="Original split · 30,561 images"
-                sx={{ mt: 1 }}
+                variant="outlined"
+                sx={{ mt: 2 }}
               />
             </Box>
           </Box>
@@ -157,8 +210,11 @@ label="Original split · 30,561 images"
           {metrics.map((metric) => (
             <Box key={metric.label}>
               <Typography
-                variant="subtitle2"
-                sx={{ mb: 1.5,fontWeight:700 }}
+                sx={{
+                  fontWeight: 800,
+                  color: palette.forest,
+                  mb: 1.5,
+                }}
               >
                 {metric.label}
               </Typography>
@@ -170,27 +226,35 @@ label="Original split · 30,561 images"
                     xs: "1fr",
                     sm: "1fr 1fr",
                   },
-                  gap: 2,
+                  gap: 3,
                 }}
               >
                 <Box>
                   <Typography
-                    variant="caption"
-                    color="text.secondary"
+                    sx={{
+                      color: palette.muted,
+                      fontSize: 12,
+                      mb: 1,
+                    }}
                   >
-                    CNN
+                    Original split
                   </Typography>
-                  <MetricValue value={metric.cnn} />
+
+                  <MetricValue value={metric.original} />
                 </Box>
 
                 <Box>
                   <Typography
-                    variant="caption"
-                    color="text.secondary"
+                    sx={{
+                      color: palette.muted,
+                      fontSize: 12,
+                      mb: 1,
+                    }}
                   >
-                    HOG + SVM
+                    Clean split
                   </Typography>
-                  <MetricValue value={metric.svm} />
+
+                  <MetricValue value={metric.clean} />
                 </Box>
               </Box>
             </Box>
@@ -198,18 +262,76 @@ label="Original split · 30,561 images"
 
           <Divider />
 
-          <Typography variant="body2" color="text.secondary">
-  SVM results were reported using the
-  original/experiment split containing 30,561 test images.
-  This split was not identity-disjoint.
+          <Box>
+            <Typography
+              sx={{
+                fontWeight: 800,
+                color: palette.forest,
+                mb: 1,
+              }}
+            >
+              CNN evaluation
+            </Typography>
 
-  CNN evaluation metrics are awaiting verification.
-  Direct model comparisons require evaluation on the
-  same test partition.
+            <Typography
+              sx={{
+                color: palette.muted,
+                fontSize: 14,
+                lineHeight: 1.8,
+              }}
+            >
+              Both CNN models support live predictions.
+              Their evaluation metrics have not yet been
+              verified for display in this comparison.
+            </Typography>
+          </Box>
 
-  Live predictions are available for both CNN models.
-  SVM inference is currently unavailable in this environment.
-</Typography>
+          <Box
+            sx={{
+              p: 2.5,
+              bgcolor: "#F6F8F3",
+              borderRadius: 3,
+              border: `1px solid ${palette.border}`,
+            }}
+          >
+            <Typography
+              sx={{
+                fontWeight: 800,
+                color: palette.forest,
+                mb: 1,
+              }}
+            >
+              Important research notes
+            </Typography>
+
+            <Typography
+              sx={{
+                color: palette.muted,
+                fontSize: 13,
+                lineHeight: 1.9,
+              }}
+            >
+              The SVM metrics shown above are historical
+              results reported for the respective dataset
+              splits. They have not yet been independently
+              verified against the newly supplied
+              scikit-learn model files.
+            </Typography>
+
+            <Typography
+              sx={{
+                color: palette.muted,
+                fontSize: 13,
+                lineHeight: 1.9,
+                mt: 1.5,
+              }}
+            >
+              All four models support live inference.
+              Direct performance comparisons between CNN
+              and SVM require evaluation on the same test
+              partition using consistent metrics.
+            </Typography>
+          </Box>
         </Stack>
       </CardContent>
     </Card>

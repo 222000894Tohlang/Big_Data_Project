@@ -16,8 +16,8 @@ from config import (
 )
 
 from contextlib import asynccontextmanager
-from svm_inference import predict_svm
-from svm_loader import SVMUnavailableError
+from svm_inference import predict_svm_species
+from svm_loader import load_svm_model
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
@@ -168,34 +168,20 @@ def list_models():
     }
 
 
+
 @app.post("/predict/svm")
-async def predict_with_svm(file: UploadFile = File(...)):
+async def predict_with_svm(
+    file: UploadFile = File(...),
+    model_name: Literal["svm_clean", "svm_original"] = "svm_clean",
+):
     try:
-        if file.content_type not in ("image/jpeg", "image/png"):
+        if file.content_type not in ALLOWED_IMAGE_TYPES:
             raise HTTPException(
                 status_code=415,
                 detail="Only JPEG and PNG images are supported.",
             )
 
-        # Check availability before reading the image.
-        from svm_loader import svm_model_exists
-
-        if not svm_model_exists():
-            raise HTTPException(
-                status_code=503,
-                detail=(
-                    "SVM model is not available yet. "
-                    "A CPU-compatible artifact is required."
-                ),
-            )
-
-        image_bytes = await file.read()
-
-        if len(image_bytes) > 10 * 1024 * 1024:
-            raise HTTPException(
-                status_code=413,
-                detail="Image exceeds the 10 MB limit.",
-            )
+        image_bytes = await file.read(MAX_UPLOAD_SIZE + 1)
 
         if not image_bytes:
             raise HTTPException(
@@ -203,13 +189,41 @@ async def predict_with_svm(file: UploadFile = File(...)):
                 detail="Uploaded image is empty.",
             )
 
-        return predict_svm(image_bytes)
+        if len(image_bytes) > MAX_UPLOAD_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail="Image exceeds the 10 MB upload limit.",
+            )
 
-    except SVMUnavailableError as exc:
+        try:
+            load_svm_model(model_name)
+        except (FileNotFoundError, TypeError, ValueError) as exc:
+            logger.exception("SVM model unavailable")
+            raise HTTPException(
+                status_code=503,
+                detail=f"SVM model unavailable: {exc}",
+            ) from exc
+
+        return predict_svm_species(
+            image_bytes,
+            model_name=model_name,
+        )
+
+    except HTTPException:
+        raise
+
+    except ValueError as exc:
         raise HTTPException(
-            status_code=503,
+            status_code=400,
             detail=str(exc),
         ) from exc
+
+    except Exception:
+        logger.exception("SVM prediction failed")
+        raise HTTPException(
+            status_code=500,
+            detail="SVM prediction failed.",
+        ) from None
 
     finally:
         await file.close()

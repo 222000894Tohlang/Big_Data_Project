@@ -1,0 +1,12 @@
+
+fastapi==0.115.12
+uvicorn==0.34.3
+python-multipart==0.0.20
+pydantic==2.11.5
+
+numpy
+scipy
+scikit-learn==1.6.1
+scikit-image
+joblib
+Pillow

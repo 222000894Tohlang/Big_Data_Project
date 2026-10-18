@@ -5,6 +5,7 @@ from data_loader import load_splits
 from hog_features import load_image_gray, extract_hog, hog_feature_dim
 from config import FEATURES_PATH, LABEL_COL
 
+# Build features for a given split
 def build_split_features(df, species_to_id):
     X = np.zeros((len(df), hog_feature_dim()), dtype=np.float32)
     y = np.zeros(len(df), dtype=np.int64)
@@ -38,6 +39,7 @@ def main():
     print(f"\nDone in {time.time()-t0:.1f}s")
     print("Shapes:", X_train.shape, X_val.shape, X_test.shape)
 
+    # SAVE FEATURES
     np.savez_compressed(
         FEATURES_PATH,
         X_train=X_train, y_train=y_train,

@@ -13,13 +13,13 @@ def main():
     X_test, y_test  = data["X_test"], data["y_test"]
     species_list = list(data["species_list"])
 
-    # 1) Scale — fit on train only
+    # Scale features
     scaler = StandardScaler().fit(X_train)
     Xtr = scaler.transform(X_train)
     Xva = scaler.transform(X_val)
     Xte = scaler.transform(X_test)
 
-    # 2) Tune C on validation
+    # Hyperparameter search for C
     best_C, best_val_f1 = None, -1.0
 
     for C in [0.01, 0.1, 1]:
@@ -45,13 +45,13 @@ def main():
             flush=True
         )
 
-    # 3) Refit on train + val with chosen C
+    # Train final model on train+val
     Xtrva = np.vstack([Xtr, Xva])
     ytrva = np.concatenate([y_train, y_val])
     final = LinearSVC(C=best_C, class_weight="balanced",
                       max_iter=5000, dual="auto").fit(Xtrva, ytrva)
 
-    # 4) Evaluate on test
+    # Evaluate on test
     y_pred = final.predict(Xte)
     print("\n=== TEST (leakage-aware, unseen) ===")
     print("Accuracy:", accuracy_score(y_test, y_pred))
@@ -61,7 +61,7 @@ def main():
     print("Confusion matrix (rows=true, cols=pred):")
     print(confusion_matrix(y_test, y_pred))
 
-    # 5) Save
+    # Save the model, scaler, species list, and config
     joblib.dump({
         "scaler": scaler,
         "svm": final,

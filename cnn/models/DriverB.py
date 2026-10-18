@@ -1,19 +1,12 @@
-
 from pathlib import Path
 import argparse
-
 import torch
 import torch.nn as nn
 from PIL import Image
 import matplotlib.pyplot as plt
-
 from torchvision import transforms
 
-
-# ============================================================
-# 1. CONFIGURATION
-# ============================================================
-
+# Constant paths and parameters for the CNN model and image processing.
 MODEL_PATH = Path(
     r"D:\Studies\Dataset\archive (1)\models\wildlife_cnn_leakage_aware.pth"
 )
@@ -25,13 +18,9 @@ DEVICE = torch.device(
 )
 
 
-# ============================================================
-# 2. CNN ARCHITECTURE
-# Must match TrainLeakageAware.py exactly
-# ============================================================
-
 class SimpleCNN(nn.Module):
 
+    # Initialize the CNN model
     def __init__(self, num_classes):
         super().__init__()
 
@@ -39,11 +28,9 @@ class SimpleCNN(nn.Module):
             nn.Conv2d(3, 32, kernel_size=3, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(2),
-
             nn.Conv2d(32, 64, kernel_size=3, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(2),
-
             nn.Conv2d(64, 128, kernel_size=3, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(2),
@@ -61,12 +48,7 @@ class SimpleCNN(nn.Module):
         x = self.features(x)
         return self.classifier(x)
 
-
-# ============================================================
-# 3. IMAGE TRANSFORM
-# Must match validation/test preprocessing
-# ============================================================
-
+# IMAGE TRANSFORM
 def get_transform():
     return transforms.Compose([
         transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)),
@@ -77,11 +59,7 @@ def get_transform():
         ),
     ])
 
-
-# ============================================================
-# 4. LOAD TRAINED MODEL
-# ============================================================
-
+# LOAD TRAINED MODEL
 def load_model(model_path):
     if not model_path.is_file():
         raise FileNotFoundError(
@@ -141,11 +119,7 @@ def load_model(model_path):
 
     return model, idx_to_species
 
-
-# ============================================================
-# 5. PREDICT IMAGE
-# ============================================================
-
+# PREDICT IMAGE
 def predict_image(model, idx_to_species, image_path, top_k=5):
     image_path = Path(image_path)
 
@@ -216,11 +190,7 @@ def predict_image(model, idx_to_species, image_path, top_k=5):
 
     return results
 
-
-# ============================================================
-# 6. DRIVER
-# ============================================================
-
+# DRIVER
 def main():
     parser = argparse.ArgumentParser(
         description="Test the trained wildlife CNN on an image."
@@ -262,7 +232,6 @@ def main():
         image_path="D:\\Studies\\Dataset\\archive (1)\\data\\dog\\0.0_f94e984431525aad.jpg",
         top_k=args.top_k,
     )
-
 
 if __name__ == "__main__":
     main()

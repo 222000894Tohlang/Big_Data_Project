@@ -1,3 +1,4 @@
+
 from pydantic import BaseModel, Field
 
 
@@ -13,6 +14,7 @@ class PredictionTiming(BaseModel):
 
 
 class PredictionResponse(BaseModel):
+    model_name: str = "cnn"
     species: str
     confidence: float = Field(ge=0, le=1)
     top_predictions: list[SpeciesPrediction]

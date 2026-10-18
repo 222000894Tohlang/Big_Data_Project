@@ -18,7 +18,7 @@ import ModelComparison from "./components/ModelComparison";
 const API_URL = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
-type ModelId = "cnn" | "cnn_leakage_aware" | "svm";
+type ModelId = "cnn" | "cnn_leakage_aware" | "svm_clean" | "svm_original";
 
 type ModelInfo = {
   name: string;
@@ -47,8 +47,12 @@ type CNNPrediction = {
 
 type SVMPrediction = {
   model: "svm";
+  model_name: "svm_clean" | "svm_original";
   species: string;
-  decision_score?: number;
+  decision_score: number | null;
+  timing: {
+    total_ms: number;
+  };
 };
 
 type Prediction = CNNPrediction | SVMPrediction;
@@ -86,10 +90,16 @@ const modelOptions: {
     number: "02",
   },
   {
-    id: "svm",
-    title: "HOG + SVM",
-    subtitle: "Traditional machine learning",
+    id: "svm_clean",
+    title: "Clean-Split HOG + SVM",
+    subtitle: "Traditional ML · Clean split",
     number: "03",
+  },
+  {
+    id: "svm_original",
+    title: "Other-Split HOG + SVM",
+    subtitle: "Traditional ML · Alternative split",
+    number: "04",
   },
 ];
 
@@ -194,10 +204,9 @@ function App() {
     formData.append("file", file);
 
     try {
-      const endpoint =
-        model === "svm"
-          ? "/predict/svm"
-          : `/predict?model_name=${encodeURIComponent(model)}`;
+      const endpoint = model.startsWith("svm_")
+        ? `/predict/svm?model_name=${encodeURIComponent(model)}`
+        : `/predict?model_name=${encodeURIComponent(model)}`;
 
       const response = await fetch(`${API_URL}${endpoint}`, {
         method: "POST",
@@ -375,7 +384,7 @@ function App() {
             <Stack direction="row" sx={{ mt: 4, flexWrap: "wrap", gap: 1.5 }}>
               {[
                 "22 species classes",
-                "2 live CNN models",
+                "4 live classification models",
                 "WildlifeReID-10K",
               ].map((item) => (
                 <Chip
@@ -442,7 +451,8 @@ function App() {
                 display: "grid",
                 gridTemplateColumns: {
                   xs: "1fr",
-                  md: "repeat(3, 1fr)",
+                  md: "repeat(2, 1fr)",
+                  lg: "repeat(4, 1fr)",
                 },
                 gap: 2,
               }}
@@ -853,9 +863,58 @@ function App() {
                         </Stack>
                       </>
                     ) : (
-                      <Typography sx={{ color: palette.muted, mt: 2 }}>
-                        SVM prediction. Probability confidence is unavailable.
-                      </Typography>
+                      <Stack spacing={2} sx={{ mt: 3 }}>
+                        <Box>
+                          <Typography
+                            sx={{
+                              color: palette.muted,
+                              fontSize: 12,
+                              mb: 0.5,
+                            }}
+                          >
+                            SVM decision score
+                          </Typography>
+
+                          <Typography
+                            sx={{
+                              color: palette.moss,
+                              fontWeight: 800,
+                              fontSize: 24,
+                            }}
+                          >
+                            {prediction.decision_score == null
+                              ? "Unavailable"
+                              : prediction.decision_score.toFixed(4)}
+                          </Typography>
+                        </Box>
+
+                        <Box>
+                          <Typography
+                            sx={{
+                              color: palette.muted,
+                              fontSize: 12,
+                              mb: 0.5,
+                            }}
+                          >
+                            Inference time
+                          </Typography>
+
+                          <Typography sx={{ fontWeight: 800, fontSize: 18 }}>
+                            {prediction.timing.total_ms.toFixed(2)} ms
+                          </Typography>
+                        </Box>
+
+                        <Typography
+                          sx={{
+                            color: palette.muted,
+                            fontSize: 12,
+                            lineHeight: 1.7,
+                          }}
+                        >
+                          The decision score is an SVM classification margin,
+                          not a probability or confidence percentage.
+                        </Typography>
+                      </Stack>
                     )}
 
                     <Alert severity="info" sx={{ mt: 4 }}>

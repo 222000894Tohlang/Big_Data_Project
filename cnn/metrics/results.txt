@@ -1,0 +1,49 @@
+df = pd.read_csv(SPLIT_CSV)
+Resolving test image paths...
+
+Evaluating model on test images...
+Processed 23,265/23,265 images
+
+=================================================================
+LEAKAGE-AWARE CNN: MACRO EVALUATION METRICS
+=================================================================
+Test images:       23,265
+Test identities:   1,627
+Species evaluated: 22
+Macro Precision:   0.9100
+Macro Recall:      0.8994
+Macro F1-score:    0.9002
+
+Per-species classification report:
+              precision    recall  f1-score   support
+
+        bird     0.9576    0.9206    0.9387       491
+         cat     0.8907    0.9288    0.9093      1965
+     chicken     0.7212    0.8197    0.7673       183
+  chimpanzee     0.8874    0.9396    0.9127      1258
+         cow     0.9801    0.9572    0.9685      3595
+         dog     0.8587    0.9052    0.8814      1551
+     dolphin     0.9192    0.9630    0.9406       378
+        fish     1.0000    0.9455    0.9720        55
+     giraffe     0.8163    0.9302    0.8696       301
+       hyena     0.7526    0.8111    0.7807       360
+     leopard     0.9517    0.9005    0.9254      1729
+     macaque     0.9512    0.8931    0.9213       131
+       nyala     0.9259    0.9358    0.9309       374
+       panda     0.9596    0.9071    0.9326      1517
+  polar bear     0.8381    0.3911    0.5333       225
+    sea star     0.9562    0.8659    0.9088       328
+  sea turtle     0.9752    0.9665    0.9708      3702
+        seal     0.8590    0.9157    0.8864       439
+       tiger     0.9278    0.9330    0.9304      1075
+       whale     0.9931    0.9924    0.9928      1314
+  whaleshark     0.9549    0.9793    0.9669      1015
+       zebra     0.9445    0.9851    0.9644      1279
+
+    accuracy                         0.9351     23265
+   macro avg     0.9100    0.8994    0.9002     23265
+weighted avg     0.9363    0.9351    0.9345     23265
+
+
+Macro metrics saved to: D:\Studies\Dataset\archive (1)\models\leakage_aware_macro_metrics.csv
+Per-species metrics saved to: D:\Studies\Dataset\archive (1)\models\leakage_aware_per_species_metrics.csv

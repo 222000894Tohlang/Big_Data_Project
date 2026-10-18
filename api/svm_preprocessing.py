@@ -2,16 +2,11 @@
 from io import BytesIO
 
 import numpy as np
-<<<<<<< HEAD
 from PIL import Image, UnidentifiedImageError
-=======
-from PIL import Image, ImageOps
->>>>>>> data
 from skimage.feature import hog
 
 
 IMAGE_SIZE = (224, 224)
-<<<<<<< HEAD
 EXPECTED_FEATURES = 6084
 
 
@@ -39,24 +34,6 @@ def preprocess_svm_image(image_bytes: bytes) -> np.ndarray:
         raise ValueError(
             "Unable to read the uploaded image."
         ) from exc
-=======
-
-
-def extract_hog_features(image_bytes: bytes) -> np.ndarray:
-    """
-    Convert an uploaded image into a HOG feature vector.
-    """
-
-    with Image.open(BytesIO(image_bytes)) as image:
-        image = ImageOps.exif_transpose(image)
-        image = image.convert("L")
-        image = image.resize(IMAGE_SIZE)
-
-        image_array = np.asarray(
-            image,
-            dtype=np.float32,
-        )
->>>>>>> data
 
     features = hog(
         image_array,
@@ -67,13 +44,10 @@ def extract_hog_features(image_bytes: bytes) -> np.ndarray:
         feature_vector=True,
     )
 
-<<<<<<< HEAD
     if features.shape != (EXPECTED_FEATURES,):
         raise ValueError(
             f"Expected {EXPECTED_FEATURES} HOG features, "
             f"received {features.shape[0]}."
         )
 
-=======
->>>>>>> data
     return features.reshape(1, -1)

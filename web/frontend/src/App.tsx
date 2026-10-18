@@ -18,11 +18,7 @@ import ModelComparison from "./components/ModelComparison";
 const API_URL = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
-<<<<<<< HEAD
 type ModelId = "cnn" | "cnn_leakage_aware" | "svm_clean" | "svm_original";
-=======
-type ModelId = "cnn" | "cnn_leakage_aware" | "svm";
->>>>>>> data
 
 type ModelInfo = {
   name: string;
@@ -51,17 +47,12 @@ type CNNPrediction = {
 
 type SVMPrediction = {
   model: "svm";
-<<<<<<< HEAD
   model_name: "svm_clean" | "svm_original";
   species: string;
   decision_score: number | null;
   timing: {
     total_ms: number;
   };
-=======
-  species: string;
-  decision_score?: number;
->>>>>>> data
 };
 
 type Prediction = CNNPrediction | SVMPrediction;
@@ -99,7 +90,6 @@ const modelOptions: {
     number: "02",
   },
   {
-<<<<<<< HEAD
     id: "svm_clean",
     title: "Clean-Split HOG + SVM",
     subtitle: "Traditional ML · Clean split",
@@ -111,13 +101,6 @@ const modelOptions: {
     subtitle: "Traditional ML · Alternative split",
     number: "04",
   },
-=======
-    id: "svm",
-    title: "HOG + SVM",
-    subtitle: "Traditional machine learning",
-    number: "03",
-  },
->>>>>>> data
 ];
 
 const formatSpecies = (name: string) => name.replace(/[_-]/g, " ");
@@ -221,16 +204,9 @@ function App() {
     formData.append("file", file);
 
     try {
-<<<<<<< HEAD
       const endpoint = model.startsWith("svm_")
         ? `/predict/svm?model_name=${encodeURIComponent(model)}`
         : `/predict?model_name=${encodeURIComponent(model)}`;
-=======
-      const endpoint =
-        model === "svm"
-          ? "/predict/svm"
-          : `/predict?model_name=${encodeURIComponent(model)}`;
->>>>>>> data
 
       const response = await fetch(`${API_URL}${endpoint}`, {
         method: "POST",
@@ -408,11 +384,7 @@ function App() {
             <Stack direction="row" sx={{ mt: 4, flexWrap: "wrap", gap: 1.5 }}>
               {[
                 "22 species classes",
-<<<<<<< HEAD
                 "4 live classification models",
-=======
-                "2 live CNN models",
->>>>>>> data
                 "WildlifeReID-10K",
               ].map((item) => (
                 <Chip
@@ -479,12 +451,8 @@ function App() {
                 display: "grid",
                 gridTemplateColumns: {
                   xs: "1fr",
-<<<<<<< HEAD
                   md: "repeat(2, 1fr)",
                   lg: "repeat(4, 1fr)",
-=======
-                  md: "repeat(3, 1fr)",
->>>>>>> data
                 },
                 gap: 2,
               }}
@@ -895,7 +863,6 @@ function App() {
                         </Stack>
                       </>
                     ) : (
-<<<<<<< HEAD
                       <Stack spacing={2} sx={{ mt: 3 }}>
                         <Box>
                           <Typography
@@ -948,11 +915,6 @@ function App() {
                           not a probability or confidence percentage.
                         </Typography>
                       </Stack>
-=======
-                      <Typography sx={{ color: palette.muted, mt: 2 }}>
-                        SVM prediction. Probability confidence is unavailable.
-                      </Typography>
->>>>>>> data
                     )}
 
                     <Alert severity="info" sx={{ mt: 4 }}>

@@ -12,7 +12,6 @@ import {
 
 type Metric = {
   label: string;
-<<<<<<< HEAD
   original: number;
   clean: number;
 };
@@ -36,35 +35,6 @@ function MetricValue({ value }: { value: number }) {
   return (
     <Stack spacing={0.75}>
       <Typography sx={{ fontWeight: 800, fontSize: 15 }}>
-=======
-  cnn: number | null;
-  svm: number | null;
-};
-
-const metrics: Metric[] = [
-  { label: "Accuracy", cnn: 84.0, svm: 80.87 }, //  { label: "Accuracy", cnn: null, svm: 83.34 },
-  { label: "Macro F1-score", cnn: null, svm: 79.98 },
-  { label: "Macro precision", cnn: null, svm: 78.23 },
-  { label: "Macro recall", cnn: null, svm: 82.65 },
-];
-
-function MetricValue({
-  value,
-}: {
-  value: number | null;
-}) {
-  if (value === null) {
-    return (
-      <Typography variant="body2" color="text.secondary">
-        Not verified
-      </Typography>
-    );
-  }
-
-  return (
-    <Stack spacing={0.5}>
-      <Typography variant="body2" sx={{fontWeight:600}}>
->>>>>>> data
         {value.toFixed(2)}%
       </Typography>
 
@@ -72,7 +42,6 @@ function MetricValue({
         variant="determinate"
         value={value}
         sx={{
-<<<<<<< HEAD
           height: 8,
           borderRadius: 4,
           bgcolor: "#E9EEE5",
@@ -80,10 +49,6 @@ function MetricValue({
             bgcolor: palette.moss,
             borderRadius: 4,
           },
-=======
-          height: 7,
-          borderRadius: 2,
->>>>>>> data
         }}
       />
     </Stack>
@@ -92,7 +57,6 @@ function MetricValue({
 
 export default function ModelComparison() {
   return (
-<<<<<<< HEAD
     <Card
       variant="outlined"
       sx={{
@@ -123,18 +87,10 @@ export default function ModelComparison() {
                 fontWeight: 800,
               }}
             >
-=======
-    <Card variant="outlined" sx={{ borderRadius: 3 }}>
-      <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-        <Stack spacing={3}>
-          <Box>
-            <Typography variant="h5" sx={{fontWeight:700}}>
->>>>>>> data
               Model Performance Comparison
             </Typography>
 
             <Typography
-<<<<<<< HEAD
               sx={{
                 color: palette.muted,
                 mt: 1,
@@ -165,36 +121,11 @@ export default function ModelComparison() {
                 color: palette.forest,
                 fontWeight: 700,
               }}
-=======
-              variant="body2"
-              color="text.secondary"
-              sx={{ mt: 1 }}
-            >
-              Previously reported evaluation results for
-              wildlife species classification.
-            </Typography>
-          </Box>
-
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            spacing={2}
-          >
-            <Chip
-              label="CNN: Live inference available"
-              color="success"
-              variant="outlined"
-            />
-
-            <Chip
-              label="SVM: Evaluation results only"
-              variant="outlined"
->>>>>>> data
             />
           </Stack>
 
           <Divider />
 
-<<<<<<< HEAD
           <Typography
             sx={{
               fontWeight: 800,
@@ -205,8 +136,6 @@ export default function ModelComparison() {
             Previously reported HOG + SVM results
           </Typography>
 
-=======
->>>>>>> data
           <Box
             sx={{
               display: "grid",
@@ -214,7 +143,6 @@ export default function ModelComparison() {
                 xs: "1fr",
                 md: "1fr 1fr",
               },
-<<<<<<< HEAD
               gap: 2,
             }}
           >
@@ -273,57 +201,6 @@ export default function ModelComparison() {
                 size="small"
                 variant="outlined"
                 sx={{ mt: 2 }}
-=======
-              gap: 3,
-            }}
-          >
-            <Box>
-              <Typography
-                variant="subtitle1"
-                sx={{fontWeight:700}}
-                gutterBottom
-              >
-                CNN
-              </Typography>
-
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                gutterBottom
-              >
-                Convolutional Neural Network
-              </Typography>
-
-              <Chip
-                size="small"
-                label="Provisional evaluation"
-                sx={{ mt: 1 }}
-              />
-            </Box>
-
-            <Box>
-              <Typography
-                variant="subtitle1"
-                sx={{fontWeight:700}}
-                gutterBottom
-              >
-                HOG + SVM
-              </Typography>
-
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                gutterBottom
-              >
-                Histogram of Oriented Gradients
-                with Support Vector Machine
-              </Typography>
-
-              <Chip
-                size="small"
-label="Original split · 30,561 images"
-                sx={{ mt: 1 }}
->>>>>>> data
               />
             </Box>
           </Box>
@@ -333,16 +210,11 @@ label="Original split · 30,561 images"
           {metrics.map((metric) => (
             <Box key={metric.label}>
               <Typography
-<<<<<<< HEAD
                 sx={{
                   fontWeight: 800,
                   color: palette.forest,
                   mb: 1.5,
                 }}
-=======
-                variant="subtitle2"
-                sx={{ mb: 1.5,fontWeight:700 }}
->>>>>>> data
               >
                 {metric.label}
               </Typography>
@@ -354,16 +226,11 @@ label="Original split · 30,561 images"
                     xs: "1fr",
                     sm: "1fr 1fr",
                   },
-<<<<<<< HEAD
                   gap: 3,
-=======
-                  gap: 2,
->>>>>>> data
                 }}
               >
                 <Box>
                   <Typography
-<<<<<<< HEAD
                     sx={{
                       color: palette.muted,
                       fontSize: 12,
@@ -374,19 +241,10 @@ label="Original split · 30,561 images"
                   </Typography>
 
                   <MetricValue value={metric.original} />
-=======
-                    variant="caption"
-                    color="text.secondary"
-                  >
-                    CNN
-                  </Typography>
-                  <MetricValue value={metric.cnn} />
->>>>>>> data
                 </Box>
 
                 <Box>
                   <Typography
-<<<<<<< HEAD
                     sx={{
                       color: palette.muted,
                       fontSize: 12,
@@ -397,14 +255,6 @@ label="Original split · 30,561 images"
                   </Typography>
 
                   <MetricValue value={metric.clean} />
-=======
-                    variant="caption"
-                    color="text.secondary"
-                  >
-                    HOG + SVM
-                  </Typography>
-                  <MetricValue value={metric.svm} />
->>>>>>> data
                 </Box>
               </Box>
             </Box>
@@ -412,7 +262,6 @@ label="Original split · 30,561 images"
 
           <Divider />
 
-<<<<<<< HEAD
           <Box>
             <Typography
               sx={{
@@ -483,20 +332,6 @@ label="Original split · 30,561 images"
               partition using consistent metrics.
             </Typography>
           </Box>
-=======
-          <Typography variant="body2" color="text.secondary">
-  SVM results were reported using the
-  original/experiment split containing 30,561 test images.
-  This split was not identity-disjoint.
-
-  CNN evaluation metrics are awaiting verification.
-  Direct model comparisons require evaluation on the
-  same test partition.
-
-  Live predictions are available for both CNN models.
-  SVM inference is currently unavailable in this environment.
-</Typography>
->>>>>>> data
         </Stack>
       </CardContent>
     </Card>

@@ -1,0 +1,2 @@
+test_images,test_identities,species_evaluated,macro_precision,macro_recall,macro_f1_score,model_path,split_csv
+23265,1627,22,0.9100452925334287,0.8993779970116069,0.9002159530218082,D:\Studies\Dataset\archive (1)\models\wildlife_cnn_leakage_aware.pth,D:\Studies\Dataset\archive (1)\splits\leakage_aware_split.csv
